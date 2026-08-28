@@ -84,8 +84,15 @@ jobs:
           gh release view "$TAG" --json assets --jq '.assets | map(select(.name | test("\\.(dmg|exe|msi|AppImage|deb|rpm|tar\\.gz)$")) | {name: .name, url: .browser_download_url})' > assets.json
           python3 - <<'PY'
           import json, os
+          from urllib.parse import quote
           assets=json.load(open('assets.json'))
-          urls={a['name']:a['url'] for a in assets}
+          tag=os.environ['TAG']
+          repository=os.environ['GITHUB_REPOSITORY']
+          # `gh release view --json assets` exposes an API URL field, not the
+          # browser download URL. Construct the documented release navigation
+          # URLs from the immutable tag and exact asset names instead.
+          urls={a['name']:f"https://github.com/{repository}/releases/download/{tag}/{quote(a['name'])}" for a in assets}
+          assert urls and all(urls.values())
           json.dump({'version':os.environ['TAG'], 'assets':urls}, open('latest.json','w'), indent=2)
           PY
           gh release upload "$TAG" SHA256SUMS latest.json --clobber
