@@ -2,7 +2,7 @@
 
 ## Status
 
-Repair commits `1a7e5da`, `5a6141b`, `53fc465`, and `eb1a817` are pushed to `main`. Release tag `v0.1.1-r3` is building in GitHub Actions at `https://github.com/B-Divyesh/sf-game-text-beacon/actions/runs/33186406406`.
+Repair commits through `654d89e` are pushed to `main`. Release tag `v0.1.1-r4` is building in GitHub Actions at `https://github.com/B-Divyesh/sf-game-text-beacon/actions/runs/33187006463`.
 
 ## What changed
 
@@ -29,7 +29,7 @@ Repair commits `1a7e5da`, `5a6141b`, `53fc465`, and `eb1a817` are pushed to `mai
 ## Deployment and release
 
 - Static deployment is triggered by the pushed `main` branch. At this handoff update, `https://game-text-beacon.sociobot.in` still serves the prior asset hash; recheck after the factory deployment completes.
-- The first `v0.1.1` release attempt failed before assets because old `xcap 0.0.14` does not compile on the current macOS runner. `v0.1.1-r3` uses `xcap 0.4` and is the release to verify; it is building platform artifacts, checksums, and `latest.json`.
+- Earlier release attempts exposed an upstream `xcap 0.0.14` macOS compiler break, then missing macOS universal Rust and Windows icon inputs. `v0.1.1-r4` uses `xcap 0.4`, installs both macOS targets, and ships generated `.ico`/`.icns` assets; it is the release to verify.
 - The static landing page deliberately keeps the download control hidden until a same-origin `latest.json` is published, avoiding the previous GitHub API 404 console error. After the release assets finish, update `public/latest.json` with the release asset URLs and push so the deployed download button becomes live.
 
 ## Operator action
