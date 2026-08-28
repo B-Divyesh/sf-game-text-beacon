@@ -15,9 +15,10 @@ npm install
 npm run dev
 ```
 
-For the desktop window:
+For the desktop window on Debian or Ubuntu, install the documented native prerequisites once, then run it:
 
 ```sh
+./scripts/install-linux-prereqs.sh
 npm run tauri dev
 ```
 
@@ -31,6 +32,8 @@ npm run build:site  # static landing site -> dist/site
 npm run build       # same static deployment build -> dist/site
 npm run tauri build # local native package build
 ```
+
+The two native claim commands in `.factory/claims.json` are deliberately pure Rust contract checks. They run after `npm ci` without GTK/WebKit development headers. Install the prerequisites above only when launching or packaging the desktop window.
 
 `npm run build:site` is the deployment build command. The static output has `index.html` at `dist/site/index.html`.
 

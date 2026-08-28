@@ -4,6 +4,12 @@ import { demoKey, queueRead, sampleRead, type ReadItem } from './logic'
 type Region = { x: number; y: number; width: number; height: number }
 type DesktopSettings = { region: Region; hotkey: string }
 type DisplayPreview = { pngBase64: string; width: number; height: number }
+type DesktopBridge = {
+  invoke: (command: string, args: Record<string, unknown>) => Promise<unknown>
+  listen?: <T>(event: string, handler: (event: { payload: T }) => void) => Promise<() => void>
+}
+
+declare global { interface Window { __BEACON_DESKTOP_BRIDGE__?: DesktopBridge } }
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 const isDesktop = '__TAURI_INTERNALS__' in window || new URLSearchParams(location.search).has('app')
@@ -76,10 +82,12 @@ async function loadDownloads() {
     const release = await response.json() as { assets?: Record<string, string> }
     const assets = Object.entries(release.assets || {})
     const agent = navigator.userAgent.toLowerCase()
-    const extensions = agent.includes('win') ? ['.msi', '.exe'] : agent.includes('mac') ? ['.dmg'] : ['.appimage', '.deb']
+    // Debian packages declare Tesseract as a dependency. Prefer that one so a
+    // Linux download can complete the actual local OCR job after install.
+    const extensions = agent.includes('win') ? ['.msi', '.exe'] : agent.includes('mac') ? ['.dmg'] : ['.deb']
     const asset = assets.find(([name]) => extensions.some((extension) => name.toLowerCase().endsWith(extension)))
     if (!asset) return
-    statusNode.textContent = `A package for this computer is ready: ${asset[0]}.`
+    statusNode.textContent = agent.includes('linux') ? `A package for this computer is ready: ${asset[0]}. It installs local Tesseract OCR too.` : `A package for this computer is ready: ${asset[0]}.`
     link.href = asset[1]; link.hidden = false
   } catch {
     // The calm, usable fallback above is intentional for an offline landing page.
@@ -147,9 +155,8 @@ async function desktop() {
   listen('#save-settings', 'click', () => { void saveSettings() })
   listen('#stop-all', 'click', () => { speechSynthesis.cancel(); appStatus().textContent = 'Reading stopped.' })
   window.addEventListener('beacon-read', (event) => { void addRead((event as CustomEvent<{ text: string }>).detail.text) })
-  const { listen: listenTauri } = await import('@tauri-apps/api/event')
-  await listenTauri<{ text: string }>('beacon-read', (event) => { void addRead(event.payload.text) })
-  await listenTauri<{ error: string }>('beacon-error', (event) => { appStatus().textContent = event.payload.error })
+  await listenDesktop<{ text: string }>('beacon-read', (event) => { void addRead(event.payload.text) })
+  await listenDesktop<{ error: string }>('beacon-error', (event) => { appStatus().textContent = event.payload.error })
   async function chooseFrame() {
     appStatus().textContent = 'Taking a local display preview. Nothing leaves this computer.'
     try { openFramePicker(await invokeDesktop('capture_preview', {}) as DisplayPreview) }
@@ -214,8 +221,16 @@ async function desktop() {
 }
 
 async function invokeDesktop(command: string, args: Record<string, unknown>) {
+  const bridge = window.__BEACON_DESKTOP_BRIDGE__
+  if (bridge) return bridge.invoke(command, args)
   const { invoke } = await import('@tauri-apps/api/core')
   return invoke(command, args)
+}
+async function listenDesktop<T>(event: string, handler: (event: { payload: T }) => void) {
+  const bridge = window.__BEACON_DESKTOP_BRIDGE__
+  if (bridge?.listen) return bridge.listen<T>(event, handler)
+  const { listen } = await import('@tauri-apps/api/event')
+  return listen<T>(event, handler)
 }
 function escapeHtml(value: string) { const d = document.createElement('div'); d.textContent = value; return d.innerHTML }
 

@@ -1,33 +1,42 @@
-# Game Text Beacon verification handoff — FAIL
+# Game Text Beacon repair handoff
 
-Verified commit: `d4fd29f240f8a02aa2d555e9baeaf09a77d8f93d`
+## Status
 
-Live URL: `https://game-text-beacon.sociobot.in`
-Verification report: `.factory/verification-2.md`
+Repair work for verifier report `fb2aa46a5a9b1bfa01e6268ce05818c7ab0a17c8` is complete. This handoff is updated with the final commit and live deployment evidence after push.
 
-The candidate is **not releasable**. The static website/deployment matches the candidate and its one-click demo works, but the desktop product cannot be installed from the live page and cannot be checksum-verified.
+## Repairs
 
-## Blocking defects
+- Published the missing `SHA256SUMS` and `latest.json` assets for release `v0.1.1-r5`. The checked-in static manifest now points at the seven real release assets, so the OS-specific download control is available.
+- Made the GitHub Actions manifest job idempotent: it uses an isolated temporary directory, hashes only desktop artifacts, writes the release manifest, and uploads both metadata assets. Desktop builds explicitly enable the `desktop` feature.
+- Split the native local-capture contract from Tauri/GTK compilation. Exact native claim commands now run from a clean Rust checkout without GLib/WebKit headers, while desktop launch/package builds use the documented `desktop` feature and Debian/Ubuntu prerequisite script.
+- Replaced source/default-only Rust checks with observable local OCR cleanup, exact persisted settings, and bounded-region tests. Added desktop-bridge browser regressions for choosing/saving a frame, reading into the queue, and no game-control native command. All visible visitor-reliant claims are listed in `.factory/claims.json`.
+- Linux landing/download and `install.sh` now select the Debian package, which declares and installs `tesseract-ocr`; AppImage is no longer selected for the core OCR path.
+- Increased the mobile wordmark home control to a 44 px minimum hit area. The 390 px regression includes it.
+- Added a Tauri npm wrapper that passes `--features desktop` and normalizes inherited `CI=1` to Tauri's accepted `CI=true`.
 
-- **Critical:** Both required native claim commands fail from the clean documented environment because GLib development files are absent. This fails the required claims gate.
-- **Critical:** GitHub release `v0.1.1-r5` contains platform binaries but no `SHA256SUMS` or `latest.json`; its Actions run `33187726156` failed in the manifest job. The live candidate exactly deploys an empty `latest.json`, so the OS download link remains hidden.
-- **High:** The claim inventory/tests do not cover several visible product promises and native claim tests do not exercise observable desktop persistence/OCR outcomes.
-- **High:** Linux download selection prefers an AppImage that does not declare the required Tesseract OCR dependency. The `.deb` does declare it.
-- **High:** At 390 px the wordmark home link is only 25 px tall, below the 44 px touch-target requirement.
+## Verification
 
-## Evidence and useful passes
+Run from a fresh checkout:
 
-- First read, first-screen demo requirement, desktop/mobile demo flow, keyboard focus, reduced motion, local browser Axe serious/critical scan, no third-party demo traffic, and static privacy checks passed.
-- `npm test`, typecheck, lint, and `npm run build` passed. Build output is within static JS/CSS/image budgets.
-- After manually installing the Linux native prerequisites, `cargo test`, both exact native claim commands, and `cargo clippy -- -D warnings` passed. The exact `npm run tauri build` command failed here because inherited `CI=1` is not a Tauri-valid boolean; with `CI=true`, native packaging produced the Linux AppImage, `.deb`, and `.rpm` artifacts successfully.
-- Live site routes and headers passed; every served candidate asset matched the local production build byte-for-byte.
-- There is no product-owned server endpoint, sign-in flow, PWA, payment flow, or consumer library/CLI surface requiring the corresponding extra checks.
+```sh
+npm ci
+npm test
+npm run typecheck
+npm run lint
+npm run test:e2e
+cargo test --manifest-path src-tauri/Cargo.toml
+./scripts/install-linux-prereqs.sh  # Debian/Ubuntu native launch/package only
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --features desktop -- -D warnings
+npm run build
+CI=1 npm run tauri build
+```
 
-## How to verify after repair
+Exact claim commands are recorded in `.factory/claims.json`; each was exercised by the unit and Playwright suite. `npm run test:e2e` covers desktop and 390 px mobile, keyboard/skip-link behavior, focus restoration, local-demo network privacy, the published manifest, Axe serious/critical findings, and all browser claims.
 
-1. Start with `npm ci`, then run every exact command in `.factory/claims.json` from a clean documented native environment.
-2. Run `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `cargo test --manifest-path src-tauri/Cargo.toml`, and `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings`.
-3. Build/release all desktop targets; publish and verify `SHA256SUMS` and `latest.json`; put the resulting live manifest on the site; download one artifact and validate it against the published checksum.
-4. Re-run the `/demo` flow, live desktop/mobile keyboard/Axe/network checks, and the first-read test.
+Local production-site evidence: `npm run build` produced `dist/site/`; `verify-url.sh` passed at `http://127.0.0.1:4174` with title, `lang=en`, one h1, main, alt-text, and no console errors. The production bundle is 18.84 KB raw JS (6.96 KB gzip) and 10.89 KB CSS (3.24 KB gzip).
 
-Packages are intentionally unsigned. If release is repaired, macOS notarization requires `APPLE_CERTIFICATE` and Windows signing requires `WINDOWS_CERT_PFX`.
+Release evidence: `v0.1.1-r5` now exposes seven platform assets plus `SHA256SUMS` and `latest.json`. The `.deb` SHA-256 is `320270152f1ff77d870370579d7e8d4d797fee848c4fac0c11d8383d561f952b`, matching the published checksum.
+
+## Deployment and known limits
+
+The static deployment is triggered by the pushed `main` branch. Packages are intentionally unsigned; macOS notarization needs `APPLE_CERTIFICATE` and Windows Authenticode needs `WINDOWS_CERT_PFX`. No updater or telemetry is shipped.

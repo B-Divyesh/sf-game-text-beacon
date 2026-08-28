@@ -39,6 +39,41 @@
     "claim": "The desktop app saves the capture region and hotkey on your device",
     "where": "privacy page and desktop capture frame",
     "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_saved_region_settings",
-    "sandbox": "native settings default has a usable region and hotkey; production command persists the same settings locally"
+    "sandbox": "fresh local settings directory; save a changed region and hotkey, reopen the store, and assert the exact persisted values"
+  },
+  {
+    "id": "windowed-capture",
+    "claim": "Beacon captures only the selected region from a windowed or borderless game",
+    "where": "landing steps and desktop app",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_windowed_capture",
+    "sandbox": "a region extending beyond a local display is clamped to its exact visible bounds; an out-of-display region is rejected"
+  },
+  {
+    "id": "capture-frame",
+    "claim": "Choose the text region yourself",
+    "where": "landing facts and desktop capture frame",
+    "test": "npm run test:e2e -- --grep @claim:capture-frame",
+    "sandbox": "mocked local desktop bridge; draw a sample display frame and assert that the desktop UI saves it"
+  },
+  {
+    "id": "reading-queue",
+    "claim": "Each result joins a queue you can repeat or stop",
+    "where": "landing steps and desktop reading queue",
+    "test": "npm run test:e2e -- --grep @claim:reading-queue",
+    "sandbox": "mocked local capture result; press Read this frame and assert that its text appears in the visible queue"
+  },
+  {
+    "id": "no-game-automation",
+    "claim": "Beacon does not press game controls or change a game",
+    "where": "landing preview, limits, and terms",
+    "test": "npm run test:e2e -- --grep @claim:no-game-automation",
+    "sandbox": "mocked desktop bridge; invoke Read this frame and assert that the only native operations are settings lookup and region capture"
+  },
+  {
+    "id": "linux-ocr-package",
+    "claim": "The Linux download installs local Tesseract OCR",
+    "where": "desktop download status",
+    "test": "npm run test:e2e -- --grep @claim:linux-ocr-package",
+    "sandbox": "published-manifest fixture with both AppImage and Debian assets; assert the landing page selects the Debian package"
   }
 ]

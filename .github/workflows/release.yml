@@ -59,7 +59,7 @@ jobs:
           releaseName: Game Text Beacon ${{ needs.create-release.outputs.tag }}
           releaseDraft: false
           prerelease: false
-          args: ${{ matrix.args }}
+          args: --features desktop ${{ matrix.args }}
 
   manifest:
     needs: [create-release, build]
@@ -69,14 +69,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.create-release.outputs.tag }}
         run: |
-          mkdir release
-          gh release download "$TAG" --dir release
-          (cd release && sha256sum * > SHA256SUMS)
-          gh release view "$TAG" --json assets --jq '.assets | map({name: .name, url: .browser_download_url})' > assets.json
+          set -euo pipefail
+          release_dir="$(mktemp -d)"
+          trap 'rm -rf "$release_dir"' EXIT
+          gh release download "$TAG" --dir "$release_dir" --pattern '*.dmg' --pattern '*.exe' --pattern '*.msi' --pattern '*.AppImage' --pattern '*.deb' --pattern '*.rpm' --pattern '*.tar.gz'
+          (
+            cd "$release_dir"
+            find . -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort | while IFS= read -r asset; do sha256sum "$asset"; done
+          ) > SHA256SUMS
+          gh release view "$TAG" --json assets --jq '.assets | map(select(.name | test("\\.(dmg|exe|msi|AppImage|deb|rpm|tar\\.gz)$")) | {name: .name, url: .browser_download_url})' > assets.json
           python3 - <<'PY'
           import json, os
           assets=json.load(open('assets.json'))
           urls={a['name']:a['url'] for a in assets}
           json.dump({'version':os.environ['TAG'], 'assets':urls}, open('latest.json','w'), indent=2)
           PY
-          gh release upload "$TAG" release/SHA256SUMS latest.json --clobber
+          gh release upload "$TAG" SHA256SUMS latest.json --clobber
