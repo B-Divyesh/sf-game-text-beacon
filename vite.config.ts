@@ -3,5 +3,5 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   clearScreen: false,
   build: { target: 'es2022', cssCodeSplit: false },
-  test: { environment: 'jsdom', include: ['src/**/*.test.ts'] }
+  test: { environment: 'jsdom', include: ['src/**/*.test.ts', 'tests/**/*.test.mjs'] }
 })
