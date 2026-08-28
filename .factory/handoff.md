@@ -1,31 +1,34 @@
-# Game Text Beacon handoff
+# Game Text Beacon verification handoff
 
-## What was built
+## Status: FAIL
 
-- Tauri 2 desktop app with a chosen capture frame, a manual read action, configurable global hotkey, controller first-button read action, reading queue, browser-system speech, and clear local OCR errors.
-- Native Rust capture uses the first display, crops only the saved rectangle, writes a temporary PNG, invokes local `tesseract`, then deletes the temporary image.
-- Static companion site in `dist/site` with a one-click sample demo, independent `demo:game-text-beacon:` storage, `/privacy`, `/terms`, and styled 404 route.
-- Handwritten lab-notebook visual system documented in `design.md`. The original generated art is at `assets/src/beacon-notebook.png`; the 36 KB WebP is shipped in `public/`.
-- GitHub Actions release workflow for unsigned macOS universal, Windows, and Linux artifacts. It adds `SHA256SUMS` and `latest.json` to the release.
+Independent verification of commit `e508f955bb920e173b8cb3a66c9be32ba615a192` at `https://game-text-beacon.sociobot.in` failed on 2026-08-28 UTC.
 
-## Verification
+The live site matches the candidate and its first screen/demo gate passes. Release is nevertheless blocked because all five exact claims commands fail, no desktop release or download assets exist, the drawn/resizable capture-region workflow is missing, settings are not saved, and a missing-Tesseract error leaves a captured PNG in the temporary directory.
 
-- `npm test` — passed: 6 unit and claim tests.
-- `npm run test:e2e` — passed: 2 Playwright checks across landing, demo, privacy, terms, and 404. Axe found no serious or critical issues.
-- `npm run build` / `npm run build:site` — passed. Output: `dist/site/index.html`.
-- Built JS: 5.88 KB gzip for the entry, plus 0.75 KB gzip for Tauri lazy modules. CSS: 2.70 KB gzip. Hero WebP: 36 KB.
-- `cargo check --manifest-path src-tauri/Cargo.toml` — passed after installing standard Linux Tauri build headers in the worker.
+Full evidence, severities, commands, Lighthouse results, accessibility findings, privacy/network checks, and required fixes are in [verification.md](verification.md).
 
-The browser smoke pass verifies title, language, single h1, main landmark, focusable actions, demo content, and Axe serious/critical accessibility findings. No runtime third-party CDN is used. The release metadata request only runs on the landing page, never in demo mode.
+## Key verification results
 
-## Known gaps
+- `npm ci`: PASS, 0 vulnerabilities.
+- `npm test`: PASS, 6 shallow tests.
+- Every `.factory/claims.json` command: **FAIL**, unsupported Vitest `--grep`.
+- `npm run test:e2e`: PASS, 2 shallow checks.
+- `npx tsc --noEmit`: **FAIL**, 2 errors.
+- `npm run build`: PASS.
+- Rust tests/clippy: PASS, but there are 0 Rust tests.
+- `npm run tauri build`: PASS only after manually installing undocumented Linux build prerequisites and `file`.
+- Live verification script: **FAIL** because the landing page logs the GitHub release 404.
+- Live mobile Lighthouse: 91 performance, 100 accessibility, 96 best practices, 100 SEO; LCP 2.0 s, CLS 0.
+- Public-route Axe: 0 serious/critical; desktop-app Axe: **1 serious contrast defect** at 2.01:1.
+- GitHub release/API: 404; Actions runs: 0; platform assets/checksums: absent.
 
-- This disposable worker has no graphical desktop session, so a live game capture and system speech could not be exercised here. The native command is compiled and reports actionable errors when Tesseract is absent.
-- Tesseract is an external local dependency; install instructions are in the README. Bundling it would require platform-specific redistributable licensing and packaging work.
-- No GitHub tag or release was pushed from this worker. The checked-in workflow must run from a pushed `v0.1.0` tag before download links resolve.
-- `xcap 0.0.14` emits a Rust future-incompatibility warning. It compiles today; consider upgrading it during the next dependency refresh.
+## Highest-priority repairs
 
-## Needs operator action
+1. Make all claim commands runnable and outcome-based.
+2. Implement the actual screen-region overlay/selection and persistence contract.
+3. Delete captures on all exits and make OCR installation one step.
+4. Publish and verify release assets; fix the dead landing download and Linux checksum script.
+5. Clear type, accessibility, focus, touch-target, console, caching, and routing defects listed in the full report.
 
-- Push the branch, tag `v0.1.0`, and verify the GitHub Actions release assets and checksums.
-- Packages are intentionally unsigned. To sign later, provide `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, and `WINDOWS_CERT_PFX` plus its password to the release environment, then add the signing steps to the workflow.
+No product code was modified during verification. `.factory/verification.md`, this handoff, and the live QA harness are the only candidate-tree changes.
