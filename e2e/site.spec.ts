@@ -56,7 +56,7 @@ test('download control remains hidden until a same-origin published manifest off
 test('checked-in release manifest exposes the detected desktop download', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('#download-link')).toBeVisible()
-  await expect(page.locator('#download-link')).toHaveAttribute('href', /github\.com\/B-Divyesh\/sf-game-text-beacon\/releases\/download\/v0\.1\.1-r5\//)
+  await expect(page.locator('#download-link')).toHaveAttribute('href', /github\.com\/B-Divyesh\/sf-game-text-beacon\/releases\/download\/v[^/]+\//)
 })
 
 test('@claim:linux-ocr-package selects the Debian package that installs local Tesseract OCR', async ({ page }) => {

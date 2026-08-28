@@ -2,41 +2,37 @@
 
 ## Status
 
-Repair commit `f1c471e` addresses verifier report `fb2aa46a5a9b1bfa01e6268ce05818c7ab0a17c8` and is pushed to `main`. The static deployment is triggered by that push.
+Repair commits through `a5f63eb` address verifier report `fb2aa46a5a9b1bfa01e6268ce05818c7ab0a17c8`. Release `v0.1.4` completed successfully in GitHub Actions run `33196664822`; this handoff commit publishes its exact checked-in site manifest and triggers the static deployment.
 
 ## Repairs
 
-- Published the missing `SHA256SUMS` and `latest.json` assets for release `v0.1.1-r5`. The checked-in static manifest now points at the seven real release assets, so the OS-specific download control is available.
-- Made the GitHub Actions manifest job idempotent: it uses an isolated temporary directory, hashes only desktop artifacts, writes the release manifest, and uploads both metadata assets. Desktop builds explicitly enable the `desktop` feature.
-- Split the native local-capture contract from Tauri/GTK compilation. Exact native claim commands now run from a clean Rust checkout without GLib/WebKit headers, while desktop launch/package builds use the documented `desktop` feature and Debian/Ubuntu prerequisite script.
-- Replaced source/default-only Rust checks with observable local OCR cleanup, exact persisted settings, and bounded-region tests. Added desktop-bridge browser regressions for choosing/saving a frame, reading into the queue, and no game-control native command. All visible visitor-reliant claims are listed in `.factory/claims.json`.
-- Linux landing/download and `install.sh` now select the Debian package, which declares and installs `tesseract-ocr`; AppImage is no longer selected for the core OCR path.
-- Increased the mobile wordmark home control to a 44 px minimum hit area. The 390 px regression includes it.
-- Added a Tauri npm wrapper that passes `--features desktop` and normalizes inherited `CI=1` to Tauri's accepted `CI=true`.
+- Restored a real cross-platform release: `v0.1.4` includes Linux `.deb`, `.rpm`, and AppImage; macOS universal `.dmg` and app archive; Windows `.msi` and setup `.exe`; plus `SHA256SUMS` and `latest.json`.
+- Corrected the workflow manifest root cause. It now checks out the repository before using `gh`, downloads the release into an isolated directory, hashes only packaged desktop assets, and creates deterministic non-null GitHub release URLs.
+- Split the native local-capture contract from Tauri/GTK compilation. `cargo test --manifest-path src-tauri/Cargo.toml` now runs its observable native tests without GLib/WebKit development headers; launch/package builds explicitly select the `desktop` feature.
+- Added observable Rust contract tests for local OCR cleanup, settings persistence, and bounded capture frames. Browser bridge tests cover saving a selected frame, adding a local reading to the queue, and the absence of game-control commands.
+- Corrected Linux delivery: the landing page and installer prefer the Debian package, which declares `tesseract-ocr`; `install.sh` verifies its downloaded checksum before installation. A regression test simulates the installer’s checksum path.
+- Expanded the claims inventory and test coverage, raised the 390 px wordmark target to 44 px, and normalized inherited `CI=1` for the Tauri wrapper.
 
 ## Verification
 
-Run from a fresh checkout:
+From a clean checkout, the following passed:
 
 ```sh
 npm ci
-npm test
+npm test                    # 5 tests
 npm run typecheck
 npm run lint
-npm run test:e2e
-cargo test --manifest-path src-tauri/Cargo.toml
-./scripts/install-linux-prereqs.sh  # Debian/Ubuntu native launch/package only
+npm run test:e2e            # 14 tests: desktop + 390 px, keyboard, Axe, privacy, claims
+cargo test --manifest-path src-tauri/Cargo.toml  # 3 observable native tests
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --features desktop -- -D warnings
 npm run build
 CI=1 npm run tauri build
 ```
 
-Exact claim commands are recorded in `.factory/claims.json`; each was exercised by the unit and Playwright suite. `npm run test:e2e` covers desktop and 390 px mobile, keyboard/skip-link behavior, focus restoration, local-demo network privacy, the published manifest, Axe serious/critical findings, and all browser claims.
+`npm run build` produced `dist/site/` with 18.84 KB raw JS (6.97 KB gzip) and 10.99 KB CSS (3.25 KB gzip). `verify-url.sh` passed against the production build with a title, `lang=en`, one h1, main landmark, alt text, and no console errors. Playwright’s local demo coverage includes desktop and 390 px viewports, Tab/Enter keyboard operation, skip-link/focus behavior, Axe serious/critical checks, privacy request interception, offline/demo behavior, and all listed claims.
 
-Local production-site evidence: `npm run build` produced `dist/site/`; `verify-url.sh` passed at `http://127.0.0.1:4174` with title, `lang=en`, one h1, main, alt-text, and no console errors. The production bundle is 18.84 KB raw JS (6.96 KB gzip) and 10.89 KB CSS (3.24 KB gzip). `CI=1 npm run tauri build` passed and produced the Linux AppImage, `.deb`, and `.rpm`; the local `.deb` declares `tesseract-ocr, libwebkit2gtk-4.1-0, libgtk-3-0`.
-
-Release evidence: `v0.1.1-r5` now exposes seven platform assets plus `SHA256SUMS` and `latest.json`. The `.deb` SHA-256 is `320270152f1ff77d870370579d7e8d4d797fee848c4fac0c11d8383d561f952b`, matching the published checksum.
+GitHub Actions run `33196664822` passed all Ubuntu, Windows, macOS universal, and manifest jobs. The published `v0.1.4` Debian package downloads successfully; its SHA-256 is `947946e08aea3ba6bbcbf3952236ac5bd571c134d083bd5ae7d166a370db6323`, matching `SHA256SUMS`, and its metadata declares `tesseract-ocr, libwebkit2gtk-4.1-0, libgtk-3-0`.
 
 ## Deployment and known limits
 
-The static deployment is triggered by the pushed `main` branch. At the final worker check, the live host still returned its prior `latest.json` (`unpublished`, zero assets) even though `57da602` is present on `origin/main`; the factory static deploy has been triggered but had not yet consumed the branch. Packages are intentionally unsigned; macOS notarization needs `APPLE_CERTIFICATE` and Windows Authenticode needs `WINDOWS_CERT_PFX`. No updater or telemetry is shipped.
+Pushing this commit to `main` triggers the configured static deployment. The deployed site should serve `/latest.json` version `v0.1.4` with seven non-empty release URLs; verify it after deployment before a public handoff. Packages are intentionally unsigned. macOS notarization requires `APPLE_CERTIFICATE`; Windows Authenticode requires `WINDOWS_CERT_PFX`. No updater or telemetry is shipped.
