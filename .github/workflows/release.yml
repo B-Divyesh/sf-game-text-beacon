@@ -65,6 +65,10 @@ jobs:
     needs: [create-release, build]
     runs-on: ubuntu-latest
     steps:
+      # `gh release` needs a repository context. The prior job had no
+      # checkout, so its otherwise successful package builds could never
+      # download or upload release metadata.
+      - uses: actions/checkout@v4
       - env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.create-release.outputs.tag }}

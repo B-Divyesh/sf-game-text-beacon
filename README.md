@@ -39,7 +39,7 @@ The two native claim commands in `.factory/claims.json` are deliberately pure Ru
 
 ## Release
 
-Tag `v0.1.2` and push it to run `.github/workflows/release.yml`. The workflow builds unsigned macOS, Windows, and Linux packages, installs the Linux native prerequisites, and adds release checksums and `latest.json`. The landing site reads a same-origin `latest.json`, so an unpublished release never creates a browser console error.
+Tag `v0.1.3` and push it to run `.github/workflows/release.yml`. The workflow builds unsigned macOS, Windows, and Linux packages, installs the Linux native prerequisites, and adds release checksums and `latest.json`. The landing site reads a same-origin `latest.json`, so an unpublished release never creates a browser console error.
 
 Native core regression checks need only Rust; use `cargo test --manifest-path src-tauri/Cargo.toml`. Desktop development and packaging additionally need the platform prerequisites. On Debian/Ubuntu install `libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf file tesseract-ocr`, then run `npm run tauri:build`. The Linux landing-page download and `install.sh` prefer the verified `.deb`, which installs `tesseract-ocr` as a package dependency.
 
