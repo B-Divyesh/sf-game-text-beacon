@@ -1,34 +1,37 @@
-# Game Text Beacon verification handoff
+# Game Text Beacon repair handoff
 
-## Status: FAIL
+## Status
 
-Independent verification of commit `e508f955bb920e173b8cb3a66c9be32ba615a192` at `https://game-text-beacon.sociobot.in` failed on 2026-08-28 UTC.
+Repair commits `1a7e5da`, `5a6141b`, `53fc465`, and `eb1a817` are pushed to `main`. Release tag `v0.1.1-r3` is building in GitHub Actions at `https://github.com/B-Divyesh/sf-game-text-beacon/actions/runs/33186406406`.
 
-The live site matches the candidate and its first screen/demo gate passes. Release is nevertheless blocked because all five exact claims commands fail, no desktop release or download assets exist, the drawn/resizable capture-region workflow is missing, settings are not saved, and a missing-Tesseract error leaves a captured PNG in the temporary directory.
+## What changed
 
-Full evidence, severities, commands, Lighthouse results, accessibility findings, privacy/network checks, and required fixes are in [verification.md](verification.md).
+- Replaced shallow, unsupported `--grep` claims with executable Playwright and Rust regression checks. The browser tests use a clean `/demo` flow, inspect real localStorage, and intercept every request.
+- Implemented an actual desktop frame picker. It hides Beacon briefly, samples the primary display, then lets the player draw, move, and resize the frame before saving it. Region and hotkey are persisted in the app data folder; the default hotkey registers on startup and always reads the current saved region.
+- Made private temporary captures RAII-owned, so the PNG is deleted on every OCR exit, including a missing Tesseract executable.
+- Declared `tesseract-ocr` as a Debian package dependency. The Linux installer now verifies the downloaded asset's real filename against `SHA256SUMS`.
+- Added release prerequisites and a GitHub release action. Updated `xcap` to the compatible 0.4 line after the original macOS release runner exposed an upstream 0.0.14 compiler failure.
+- Repaired the dead download state, console-erroring release request, canonical URLs, focus announcements, small touch targets, desktop contrast, cache/404/security policy, social-card dimensions, and desktop walkthrough.
 
-## Key verification results
+## Verification evidence
 
-- `npm ci`: PASS, 0 vulnerabilities.
-- `npm test`: PASS, 6 shallow tests.
-- Every `.factory/claims.json` command: **FAIL**, unsupported Vitest `--grep`.
-- `npm run test:e2e`: PASS, 2 shallow checks.
-- `npx tsc --noEmit`: **FAIL**, 2 errors.
-- `npm run build`: PASS.
-- Rust tests/clippy: PASS, but there are 0 Rust tests.
-- `npm run tauri build`: PASS only after manually installing undocumented Linux build prerequisites and `file`.
-- Live verification script: **FAIL** because the landing page logs the GitHub release 404.
-- Live mobile Lighthouse: 91 performance, 100 accessibility, 96 best practices, 100 SEO; LCP 2.0 s, CLS 0.
-- Public-route Axe: 0 serious/critical; desktop-app Axe: **1 serious contrast defect** at 2.01:1.
-- GitHub release/API: 404; Actions runs: 0; platform assets/checksums: absent.
+- `npm ci` — PASS (101 packages, 0 vulnerabilities before the repair dependency work).
+- `npm test` — PASS (4 tests).
+- `npm run typecheck` / `npx tsc --noEmit` — PASS.
+- `npm run test:e2e` — PASS (9 tests): desktop, 390 px mobile, keyboard, focus restoration, network privacy, all five web claims, and Axe serious/critical checks.
+- Each exact claims command in `.factory/claims.json` was invoked. Browser claim selectors passed; `cargo test --manifest-path src-tauri/Cargo.toml claim_desktop_local_ocr` and `claim_saved_region_settings` passed.
+- `cargo test --manifest-path src-tauri/Cargo.toml` — PASS (2 tests).
+- `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings` — PASS.
+- `npm run build` — PASS. Production JS is 18.57 KB raw / 6.88 KB gzip and CSS is 10.81 KB raw / 3.24 KB gzip.
+- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4174 <evidence-dir>` — PASS: 200, no console errors, title/lang/one h1/main/alt checks passed. The local Playwright Axe integration passes; the standalone Axe CLI could not start because its Selenium Chrome binary is absent in this worker.
+- The prior local Tauri package build produced AppImage, `.deb`, and `.rpm`; the `.deb` metadata now verifies `Depends: tesseract-ocr, libwebkit2gtk-4.1-0, libgtk-3-0`. A fresh final package build is in progress locally after the capture-library compatibility update.
 
-## Highest-priority repairs
+## Deployment and release
 
-1. Make all claim commands runnable and outcome-based.
-2. Implement the actual screen-region overlay/selection and persistence contract.
-3. Delete captures on all exits and make OCR installation one step.
-4. Publish and verify release assets; fix the dead landing download and Linux checksum script.
-5. Clear type, accessibility, focus, touch-target, console, caching, and routing defects listed in the full report.
+- Static deployment is triggered by the pushed `main` branch. At this handoff update, `https://game-text-beacon.sociobot.in` still serves the prior asset hash; recheck after the factory deployment completes.
+- The first `v0.1.1` release attempt failed before assets because old `xcap 0.0.14` does not compile on the current macOS runner. `v0.1.1-r3` uses `xcap 0.4` and is the release to verify; it is building platform artifacts, checksums, and `latest.json`.
+- The static landing page deliberately keeps the download control hidden until a same-origin `latest.json` is published, avoiding the previous GitHub API 404 console error. After the release assets finish, update `public/latest.json` with the release asset URLs and push so the deployed download button becomes live.
 
-No product code was modified during verification. `.factory/verification.md`, this handoff, and the live QA harness are the only candidate-tree changes.
+## Operator action
+
+Packages are intentionally unsigned. macOS notarization needs `APPLE_CERTIFICATE`; Windows Authenticode needs `WINDOWS_CERT_PFX`. No updater is shipped and no telemetry is included.
