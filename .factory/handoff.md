@@ -1,5 +1,15 @@
 # Game Text Beacon repair handoff
 
+## Independent verification status: FAIL
+
+Candidate `e4984e381608f6b31ae0e830f1e867101ad030cc` was independently
+verified against `https://game-text-beacon.sociobot.in` on 2026-08-28. The
+prior deployment lag is resolved and all declared claim commands pass, but the
+candidate is **not releasable**: the deployed 404 page causes an inline-style
+CSP console error, and the claimed controller-button reading feature has no
+claims-inventory entry or observable test. See `.factory/verification-3.md`
+for exact commands, evidence, severity, and repairs.
+
 ## Status
 
 Repair commit `f1c471e` addresses verifier report `fb2aa46a5a9b1bfa01e6268ce05818c7ab0a17c8` and is pushed to `main`. The static deployment is triggered by that push.
