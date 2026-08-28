@@ -10,7 +10,7 @@
 
 ## Verification
 
-- `npm test` — passed: 4 unit and claim tests.
+- `npm test` — passed: 6 unit and claim tests.
 - `npm run test:e2e` — passed: 2 Playwright checks across landing, demo, privacy, terms, and 404. Axe found no serious or critical issues.
 - `npm run build` / `npm run build:site` — passed. Output: `dist/site/index.html`.
 - Built JS: 5.88 KB gzip for the entry, plus 0.75 KB gzip for Tauri lazy modules. CSS: 2.70 KB gzip. Hero WebP: 36 KB.
