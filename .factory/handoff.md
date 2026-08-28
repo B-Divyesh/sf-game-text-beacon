@@ -2,7 +2,7 @@
 
 ## Status
 
-Repair commits through `a5f63eb` address verifier report `fb2aa46a5a9b1bfa01e6268ce05818c7ab0a17c8`. Release `v0.1.4` completed successfully in GitHub Actions run `33196664822`; this handoff commit publishes its exact checked-in site manifest and triggers the static deployment.
+Repair commits through `9835e11` address verifier report `fb2aa46a5a9b1bfa01e6268ce05818c7ab0a17c8`. Release `v0.1.4` completed successfully in GitHub Actions run `33196664822`; the exact checked-in site manifest has been deployed.
 
 ## Repairs
 
@@ -35,4 +35,6 @@ GitHub Actions run `33196664822` passed all Ubuntu, Windows, macOS universal, an
 
 ## Deployment and known limits
 
-Pushing this commit to `main` triggers the configured static deployment. The deployed site should serve `/latest.json` version `v0.1.4` with seven non-empty release URLs; verify it after deployment before a public handoff. Packages are intentionally unsigned. macOS notarization requires `APPLE_CERTIFICATE`; Windows Authenticode requires `WINDOWS_CERT_PFX`. No updater or telemetry is shipped.
+Deployed with the configured static work-order helper to the existing Static Web App (deployment `350af1be-2d5d-4932-af87-aa9f14365ad2`). Live `https://game-text-beacon.sociobot.in/latest.json` now serves `v0.1.4` and seven non-empty release URLs. Live `verify-url.sh` and desktop/390 px Playwright smoke checks passed: no console errors, no Axe serious/critical findings, no mobile overflow or undersized target, and demo requests remained same-origin.
+
+Packages are intentionally unsigned. macOS notarization requires `APPLE_CERTIFICATE`; Windows Authenticode requires `WINDOWS_CERT_PFX`. No updater or telemetry is shipped.
