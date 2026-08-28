@@ -2,7 +2,7 @@
 
 ## Status
 
-Repair work for verifier report `fb2aa46a5a9b1bfa01e6268ce05818c7ab0a17c8` is complete. This handoff is updated with the final commit and live deployment evidence after push.
+Repair commit `f1c471e` addresses verifier report `fb2aa46a5a9b1bfa01e6268ce05818c7ab0a17c8` and is pushed to `main`. The static deployment is triggered by that push.
 
 ## Repairs
 
@@ -33,7 +33,7 @@ CI=1 npm run tauri build
 
 Exact claim commands are recorded in `.factory/claims.json`; each was exercised by the unit and Playwright suite. `npm run test:e2e` covers desktop and 390 px mobile, keyboard/skip-link behavior, focus restoration, local-demo network privacy, the published manifest, Axe serious/critical findings, and all browser claims.
 
-Local production-site evidence: `npm run build` produced `dist/site/`; `verify-url.sh` passed at `http://127.0.0.1:4174` with title, `lang=en`, one h1, main, alt-text, and no console errors. The production bundle is 18.84 KB raw JS (6.96 KB gzip) and 10.89 KB CSS (3.24 KB gzip).
+Local production-site evidence: `npm run build` produced `dist/site/`; `verify-url.sh` passed at `http://127.0.0.1:4174` with title, `lang=en`, one h1, main, alt-text, and no console errors. The production bundle is 18.84 KB raw JS (6.96 KB gzip) and 10.89 KB CSS (3.24 KB gzip). `CI=1 npm run tauri build` passed and produced the Linux AppImage, `.deb`, and `.rpm`; the local `.deb` declares `tesseract-ocr, libwebkit2gtk-4.1-0, libgtk-3-0`.
 
 Release evidence: `v0.1.1-r5` now exposes seven platform assets plus `SHA256SUMS` and `latest.json`. The `.deb` SHA-256 is `320270152f1ff77d870370579d7e8d4d797fee848c4fac0c11d8383d561f952b`, matching the published checksum.
 
