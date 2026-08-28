@@ -9,13 +9,6 @@ edition = "2021"
 name = "game_text_beacon_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
-[features]
-# Keep the capture/OCR core testable on a clean Rust installation. The GUI
-# feature is explicitly enabled by Tauri packaging, where the platform GTK /
-# WebKit prerequisites are installed.
-default = []
-desktop = ["dep:base64", "dep:image", "dep:tauri", "dep:tauri-plugin-global-shortcut", "dep:xcap"]
-
 [[bin]]
 name = "game-text-beacon"
 path = "src/main.rs"
