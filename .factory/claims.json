@@ -3,35 +3,42 @@
     "id": "sample-read",
     "claim": "Hear a sample objective right away",
     "where": "landing primary action and demo",
-    "test": "npm test -- --grep @claim:sample-read",
+    "test": "npm run test:e2e -- --grep @claim:sample-read",
     "sandbox": "fresh demo route; shipped sample objective is ready to read"
   },
   {
     "id": "demo-isolated",
     "claim": "Demo — sample data, nothing is saved",
     "where": "demo banner",
-    "test": "npm test -- --grep @claim:demo-isolated",
+    "test": "npm run test:e2e -- --grep @claim:demo-isolated",
     "sandbox": "fresh demo route; demo-only localStorage key prefix"
   },
   {
     "id": "local-demo-network",
     "claim": "The demo makes no third-party requests",
     "where": "privacy page and demo context",
-    "test": "npm test -- --grep @claim:local-demo-network",
+    "test": "npm run test:e2e -- --grep @claim:local-demo-network",
     "sandbox": "demo shell assets resolve same-origin only"
   },
   {
     "id": "desktop-local-ocr",
     "claim": "The desktop capture uses local OCR and no cloud OCR endpoint",
     "where": "privacy page and README",
-    "test": "npm test -- --grep @claim:desktop-local-ocr",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_desktop_local_ocr",
     "sandbox": "native capture source invokes local tesseract and contains no HTTP endpoint"
   },
   {
     "id": "free-no-account",
     "claim": "Free to use with no account",
     "where": "landing fact and privacy page",
-    "test": "npm test -- --grep @claim:free-no-account",
+    "test": "npm run test:e2e -- --grep @claim:free-no-account",
     "sandbox": "shipped client has no account or payment flow"
+  },
+  {
+    "id": "saved-region-settings",
+    "claim": "The desktop app saves the capture region and hotkey on your device",
+    "where": "privacy page and desktop capture frame",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_saved_region_settings",
+    "sandbox": "native settings default has a usable region and hotkey; production command persists the same settings locally"
   }
 ]

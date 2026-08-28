@@ -2,7 +2,7 @@
 
 Game Text Beacon reads selected game text aloud for blind and low-vision PC players. It is for windowed or borderless games that draw dialogue, menus, or objectives without screen-reader labels.
 
-The desktop app saves a screen region, captures that region on a hotkey, uses a local Tesseract OCR installation, and reads the result with the system voice. It never automates game input. Check each game’s anti-cheat policy before using any overlay or capture helper.
+The desktop app saves a screen region, captures that region on a hotkey, uses local Tesseract OCR, and reads the result with the system voice. Choose capture frame shows a current display preview where you can draw, move, and resize the exact capture rectangle. It never automates game input. Check each game’s anti-cheat policy before using any capture helper.
 
 ## Try the demo
 
@@ -21,7 +21,7 @@ For the desktop window:
 npm run tauri dev
 ```
 
-Tesseract must be installed and available as `tesseract` on your PATH for the native OCR command. On Debian/Ubuntu, use `sudo apt install tesseract-ocr`. On Windows, install Tesseract OCR and add its install folder to PATH. On macOS, use `brew install tesseract`.
+Released Debian packages declare `tesseract-ocr` as an installation dependency, so the package manager installs it with Beacon. Development builds require Tesseract on PATH: on Debian/Ubuntu, use `sudo apt install tesseract-ocr`; on Windows install Tesseract OCR and add its install folder to PATH; on macOS use `brew install tesseract`.
 
 ## Verify and build
 
@@ -36,6 +36,6 @@ npm run tauri build # local native package build
 
 ## Release
 
-Tag `v0.1.0` and push it to run `.github/workflows/release.yml`. The workflow builds unsigned macOS, Windows, and Linux packages and adds release checksums and `latest.json`. The download UI uses the GitHub API, not a cross-origin release redirect.
+Tag `v0.1.1` and push it to run `.github/workflows/release.yml`. The workflow builds unsigned macOS, Windows, and Linux packages, installs the Linux native prerequisites, and adds release checksums and `latest.json`. The landing site reads a same-origin `latest.json`, so an unpublished release never creates a browser console error.
 
 No telemetry, account, payment, or cloud OCR is included. See `/privacy` and `/terms` on the landing site for the user-facing terms.

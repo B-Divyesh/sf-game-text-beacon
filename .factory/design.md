@@ -32,3 +32,5 @@ Dashed pencil borders identify things the player may position or select. Solid i
 Prompt sheet: a practical paper notebook page at a desk edge; a blue rectangular focus frame around abstract, unreadable game UI glyph blocks; graphite pencil, subtle grid, warm desk light; hand-drawn editorial illustration, no people, no brands, no legible text, no watermark, no logo. Avoid neon gradients, game characters, screenshots, and decorative clutter.
 
 Asset provenance: `assets/src/beacon-notebook.png` is generated with the factory image deployment on 2026-08-28 from the prompt above. It is product art, not a game screenshot. Its WebP derivative is used on the landing page. A generated-art note appears in the footer.
+
+`public/beacon-social.jpg` is a 1200×630, 26 KB editorial crop composed locally from that same original notebook asset on 2026-08-28. It is used only for the social card, so social previews retain the product's original art without introducing an external image or text baked into the image.

@@ -13,11 +13,14 @@
 | Beacon reads the selected words. | 5 | pass |
 | It does not press game controls or change a game. | 10 | pass |
 | Set a frame. | 3 | pass |
-| Move and size one region over dialogue, a menu, or an objective. | 12 | pass |
+| Draw and resize one region over dialogue, a menu, or an objective. | 11 | pass |
 | Press your hotkey. | 3 | pass |
 | Beacon captures that region from a windowed or borderless game. | 10 | pass |
 | Hear the result. | 3 | pass |
 | Each result joins a queue you can repeat or stop. | 11 | pass |
+| Your saved frame and default hotkey are ready. | 8 | pass |
+| Draw, move, or resize the frame on a fresh display preview. | 11 | pass |
+| Press the hotkey to add local OCR text to the queue. | 11 | pass |
 | It does not automate play, bypass anti-cheat, work in exclusive fullscreen, or send screenshots to a cloud service. | 17 | pass |
 | Use it in single-player or accessibility-safe contexts. | 7 | pass |
 | If a game’s anti-cheat policy is unclear, do not run it alongside that game. | 15 | pass |
