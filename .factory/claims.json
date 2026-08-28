@@ -19,5 +19,19 @@
     "where": "privacy page and demo context",
     "test": "npm test -- --grep @claim:local-demo-network",
     "sandbox": "demo shell assets resolve same-origin only"
+  },
+  {
+    "id": "desktop-local-ocr",
+    "claim": "The desktop capture uses local OCR and no cloud OCR endpoint",
+    "where": "privacy page and README",
+    "test": "npm test -- --grep @claim:desktop-local-ocr",
+    "sandbox": "native capture source invokes local tesseract and contains no HTTP endpoint"
+  },
+  {
+    "id": "free-no-account",
+    "claim": "Free to use with no account",
+    "where": "landing fact and privacy page",
+    "test": "npm test -- --grep @claim:free-no-account",
+    "sandbox": "shipped client has no account or payment flow"
   }
 ]
