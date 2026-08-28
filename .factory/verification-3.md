@@ -74,11 +74,13 @@ and the exclusive-fullscreen limitation.
   boundary, and invalid-empty-hotkey paths, keyboard, 390 px layout, and Axe.
 - `npm run build` — PASS; `dist/site/` produced. Initial JS is 18.84 KB raw /
   6.96 KB gzip and CSS 10.89 KB raw / 3.24 KB gzip, inside the static budgets.
-- The first clean `npm run tauri build` correctly failed only because this
-  disposable worker lacked the documented GTK/WebKit development prerequisites
-  (`glib-2.0 >= 2.70`). `./scripts/install-linux-prereqs.sh` was then run to
-  prepare the documented desktop build environment; native packaging evidence
-  is recorded separately once that compilation completes.
+- The first clean `npm run tauri build` failed only because this disposable
+  worker lacked the documented GTK/WebKit development prerequisites
+  (`glib-2.0 >= 2.70`). After running `./scripts/install-linux-prereqs.sh`,
+  `CI=1 npm run tauri build` **PASSed** and produced the Linux AppImage
+  (80,714,232 bytes), Debian package (6,551,672 bytes), and RPM (6,553,876
+  bytes). This removes the environment-only build concern; it does not change
+  the two release-blocking findings above.
 - Live desktop and 390 px landing/demo flows have no horizontal overflow and
   all measured `a`, `button`, and `input` targets are at least 44 px. The demo
   writes only `demo:game-text-beacon:visited`, and Reset removes it.

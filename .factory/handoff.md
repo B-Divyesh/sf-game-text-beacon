@@ -8,7 +8,9 @@ prior deployment lag is resolved and all declared claim commands pass, but the
 candidate is **not releasable**: the deployed 404 page causes an inline-style
 CSP console error, and the claimed controller-button reading feature has no
 claims-inventory entry or observable test. See `.factory/verification-3.md`
-for exact commands, evidence, severity, and repairs.
+for exact commands, evidence, severity, and repairs. The documented-prerequisite
+Linux native build was independently completed successfully; this FAIL is about
+the remaining product-contract defects, not an environment build issue.
 
 ## Status
 
