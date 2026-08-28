@@ -16,10 +16,14 @@ jobs:
     steps:
       - id: tag
         run: echo "value=${GITHUB_REF_NAME:-v0.1.0}" >> "$GITHUB_OUTPUT"
-      - env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.tag.outputs.value }}
-        run: gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --generate-notes
+      - name: Create the draft release for all platform assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.value }}
+          name: Game Text Beacon ${{ steps.tag.outputs.value }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     needs: create-release
