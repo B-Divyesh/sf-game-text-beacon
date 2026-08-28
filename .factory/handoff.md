@@ -39,4 +39,4 @@ Release evidence: `v0.1.1-r5` now exposes seven platform assets plus `SHA256SUMS
 
 ## Deployment and known limits
 
-The static deployment is triggered by the pushed `main` branch. Packages are intentionally unsigned; macOS notarization needs `APPLE_CERTIFICATE` and Windows Authenticode needs `WINDOWS_CERT_PFX`. No updater or telemetry is shipped.
+The static deployment is triggered by the pushed `main` branch. At the final worker check, the live host still returned its prior `latest.json` (`unpublished`, zero assets) even though `57da602` is present on `origin/main`; the factory static deploy has been triggered but had not yet consumed the branch. Packages are intentionally unsigned; macOS notarization needs `APPLE_CERTIFICATE` and Windows Authenticode needs `WINDOWS_CERT_PFX`. No updater or telemetry is shipped.
