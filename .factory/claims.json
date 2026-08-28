@@ -1,0 +1,23 @@
+[
+  {
+    "id": "sample-read",
+    "claim": "Hear a sample objective right away",
+    "where": "landing primary action and demo",
+    "test": "npm test -- --grep @claim:sample-read",
+    "sandbox": "fresh demo route; shipped sample objective is ready to read"
+  },
+  {
+    "id": "demo-isolated",
+    "claim": "Demo — sample data, nothing is saved",
+    "where": "demo banner",
+    "test": "npm test -- --grep @claim:demo-isolated",
+    "sandbox": "fresh demo route; demo-only localStorage key prefix"
+  },
+  {
+    "id": "local-demo-network",
+    "claim": "The demo makes no third-party requests",
+    "where": "privacy page and demo context",
+    "test": "npm test -- --grep @claim:local-demo-network",
+    "sandbox": "demo shell assets resolve same-origin only"
+  }
+]

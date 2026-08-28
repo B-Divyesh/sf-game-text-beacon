@@ -1,0 +1,10 @@
+{
+  "slug": "game-text-beacon",
+  "title": "Game Text Beacon",
+  "summary": "Read game text aloud from a chosen screen region.",
+  "artifact_class": "desktop-app",
+  "monetization": "free",
+  "user": "Blind and low-vision PC players who need an on-demand fallback for visually rendered game text.",
+  "smallest_useful_product": "A Windows/Linux desktop helper that captures a chosen windowed-game region on hotkey, OCRs it locally, and queues speech without game automation.",
+  "constraints": "Windowed or borderless only; no anti-cheat bypass, cloud screenshots, game assets, or DRM bypass."
+}

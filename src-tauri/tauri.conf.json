@@ -1,0 +1,9 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Game Text Beacon",
+  "version": "0.1.0",
+  "identifier": "in.sociobot.gametextbeacon",
+  "build": { "beforeDevCommand": "npm run dev", "devUrl": "http://localhost:1420", "beforeBuildCommand": "npm run build:site", "frontendDist": "../dist/site" },
+  "app": { "windows": [{ "title": "Game Text Beacon", "width": 1120, "height": 760, "minWidth": 700, "minHeight": 540, "resizable": true }], "security": { "csp": "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" } },
+  "bundle": { "active": true, "targets": "all", "icon": ["icons/icon.png"], "category": "Utility", "shortDescription": "Read selected game text aloud", "longDescription": "A local, gamepad-aware helper that captures a chosen region and reads recognized text aloud." }
+}

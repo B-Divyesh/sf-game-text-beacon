@@ -1,0 +1,70 @@
+name: Release desktop packages
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - id: tag
+        run: echo "value=${GITHUB_REF_NAME:-v0.1.0}" >> "$GITHUB_OUTPUT"
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.value }}
+        run: gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --generate-notes
+
+  build:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            args: --target universal-apple-darwin
+          - os: windows-latest
+            args: ''
+          - os: ubuntu-22.04
+            args: ''
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tagName: ${{ needs.create-release.outputs.tag }}
+          releaseName: Game Text Beacon ${{ needs.create-release.outputs.tag }}
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+  manifest:
+    needs: [create-release, build]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+        run: |
+          mkdir release
+          gh release download "$TAG" --dir release
+          (cd release && sha256sum * > SHA256SUMS)
+          gh release view "$TAG" --json assets --jq '.assets | map({name: .name, url: .browser_download_url})' > assets.json
+          python3 - <<'PY'
+          import json, os
+          assets=json.load(open('assets.json'))
+          urls={a['name']:a['url'] for a in assets}
+          json.dump({'version':os.environ['TAG'], 'assets':urls}, open('latest.json','w'), indent=2)
+          PY
+          gh release upload "$TAG" release/SHA256SUMS latest.json --clobber
