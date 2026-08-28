@@ -24,7 +24,7 @@ Repair commits through `654d89e` are pushed to `main`. Release tag `v0.1.1-r4` i
 - `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings` — PASS.
 - `npm run build` — PASS. Production JS is 18.57 KB raw / 6.88 KB gzip and CSS is 10.81 KB raw / 3.24 KB gzip.
 - `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4174 <evidence-dir>` — PASS: 200, no console errors, title/lang/one h1/main/alt checks passed. The local Playwright Axe integration passes; the standalone Axe CLI could not start because its Selenium Chrome binary is absent in this worker.
-- The prior local Tauri package build produced AppImage, `.deb`, and `.rpm`; the `.deb` metadata now verifies `Depends: tesseract-ocr, libwebkit2gtk-4.1-0, libgtk-3-0`. A fresh final package build is in progress locally after the capture-library compatibility update.
+- `npm run tauri build` — PASS after the capture-library compatibility update: AppImage, `.deb`, and `.rpm` were produced. The `.deb` metadata verifies `Depends: tesseract-ocr, libwebkit2gtk-4.1-0, libgtk-3-0`; the final binary stayed open for 10 seconds under Xvfb.
 
 ## Deployment and release
 
