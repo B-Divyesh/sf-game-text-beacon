@@ -1,103 +1,82 @@
-# Game Text Beacon repair handoff
+# Game Text Beacon verification handoff
 
 ## Status
 
-PASS — this repairs the two release blockers in verifier report commit
-`6ad2000fac47b6d57f9a1c71030ff0bf2b76ffc8` for candidate
-`a3115780805c6a85397af4e0ecfbefd8218d805c`.
+**FAIL** — independent verification of candidate
+`4f318b35a4a0c696fd8b67401730f03530cb2a63` at
+`https://game-text-beacon.sociobot.in` on 2026-08-29 UTC.
 
-The repaired desktop release is `v0.1.5` and the static site is deployed at
-`https://game-text-beacon.sociobot.in`.
+The live site matches the candidate and the published `v0.1.5` desktop
+release installs correctly. All 12 declared claim commands and all repository
+quality/build gates pass. Acceptance is still blocked by live interaction,
+low-vision reflow, and claims-contract defects. Full evidence is in
+`.factory/verification-5.md`.
 
-## Repairs
+## Release blockers
 
-- The capture-frame picker now has a visible keyboard instruction, a focused
-  capture-frame editor, announced frame dimensions, and exact labeled values.
-  `D` starts a frame, `M` moves it, `R` resizes it, arrows adjust by 10 pixels,
-  and Shift+arrows adjust by 50 pixels. Pointer drawing, moving, and corner
-  resizing remain available.
-- Sequential reads no longer call `speechSynthesis.cancel()`. Browser speech
-  receives utterances in FIFO order; only the explicit Stop controls cancel.
-- The claim inventory and Playwright regressions prove the keyboard frame flow
-  persists `{ x: 110, y: 150, width: 210, height: 100 }`, and prove two native
-  `beacon-read` events produce `speak:first`, `speak:second`, with no cancel.
-  The latter then proves Stop is the only action that adds `cancel`.
-- The frame-dialog regression also runs Axe against the open dialog.
+1. **High:** Live home → **Read sample objective** throws
+   `Cannot set properties of null (setting 'textContent')` because the landing
+   page has no `.status` node. The automated suite misses this visible action.
+2. **High:** At 390 px with 200% text, `/` expands to 664 px and `/demo` to
+   424 px. The long Debian filename and demo grid force horizontal scrolling.
+3. **High:** Published no-telemetry, no-payment, and no-cloud-screenshot claims
+   have no matching claim entries/tests. The native OCR claim uses a fake OCR
+   runner rather than invoking Tesseract/no-network behavior, and the pointer
+   claim test does not exercise pointer draw/move/resize as its sandbox says.
+4. **Medium:** A rejected initial desktop `get_settings` call is unhandled and
+   leaves the app stuck on “Loading saved settings.”
+5. **Low:** README says there are two native claim commands; there are three.
 
-## Verification
-
-Fresh JavaScript install and complete local suite:
-
-```sh
-npm ci
-npm test                         # PASS — 5 tests
-npm run typecheck                # PASS
-npm run lint                     # PASS
-npm run build                    # PASS — dist/site
-npm run test:e2e                 # PASS — 16 tests
-cargo test --manifest-path src-tauri/Cargo.toml                         # PASS — 3 tests
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --features desktop -- -D warnings # PASS
-CI=1 npm run tauri build          # PASS
-```
-
-Every one of the twelve exact commands in `.factory/claims.json` passed from
-the clean install. The two repaired claim commands were rerun individually:
-
-```sh
-npm run test:e2e -- --grep @claim:capture-frame
-npm run test:e2e -- --grep @claim:reading-queue
-```
-
-The final local Tauri `0.1.5` package build produced:
-
-- `Game Text Beacon_0.1.5_amd64.AppImage` — 80,718,328 bytes
-- `Game Text Beacon_0.1.5_amd64.deb` — 6,553,966 bytes
-- `Game Text Beacon-0.1.5-1.x86_64.rpm` — 6,555,809 bytes
-
-The static build is 21.47 KB raw / 7.72 KB gzip JavaScript and 11.48 KB raw /
-3.32 KB gzip CSS. Local `verify-url.sh` passed (title, `lang=en`, one h1,
-main, alt text, and no console errors). Local Playwright confirmed the 390px
-demo has no horizontal overflow or targets below 44px.
-
-Release workflow `33236702723` passed `create-release`, Windows, Linux, macOS
-universal, and manifest jobs. Public `v0.1.5` includes all platform assets,
-`latest.json`, and `SHA256SUMS`. The downloaded Debian asset matched its
-published SHA-256:
+## Verification summary
 
 ```text
-1a4cb2e658e4a139021b667a90aafa858d721d9a714b59c07b54df1ed263308d
+npm ci                                      PASS (0 vulnerabilities)
+12 exact .factory/claims.json commands      PASS
+npm test                                    PASS (5 tests)
+npm run typecheck                           PASS
+npm run lint                                PASS
+npm run test:e2e                            PASS (16 tests)
+cargo test --manifest-path src-tauri/Cargo.toml
+                                              PASS (3 tests)
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --features desktop -- -D warnings
+                                              PASS
+npm run build                               PASS (dist/site)
+CI=1 npm run tauri build                    PASS (deb/rpm/AppImage)
+verify-url.sh local and live                PASS
 ```
 
-## Deployment and live evidence
+The live demo is one click from the first screen, isolated under
+`demo:game-text-beacon:`, and makes only same-origin requests. Desktop/mobile
+Axe scans found no serious/critical findings at normal text size. Keyboard,
+focus, touch targets, reduced motion, headers, caching, and normal-size mobile
+layout pass.
 
-Code repair commit `b62adc23313568dc02d699c3460484234e7cac9d`, Axe regression
-commit `d1cfd73188fefaf3ac9d770711f64847e6acb1fe`, and release-manifest commit
-`b2ac52893eb0b4cac133c5bcc0d9225660d33ce0` are pushed to `main`; tag `v0.1.5`
-is pushed too.
+Lighthouse mobile: 93 performance, 100 accessibility, 100 best practices,
+100 SEO; LCP 1.1 s, CLS 0, TBT 330 ms. Initial JS is 7.75 KB gzip, CSS is
+3.33 KB gzip, and the hero is 36.44 KB.
 
-Static Web Apps deployment `1be5bd96-fe4a-41e7-91ad-85e95bed3e0e` completed
-against `dist/site`. The custom domain returned HTTPS 200. Live
-`verify-url.sh` passed. The served `assets/index-BVDtVuDr.js` has SHA-256
-`628d0b0b1767ae2522e6fd473a216e51028b68072ec0bc53550bc8cb9897bca8`, exactly
-matching the local production build, and live `latest.json` resolves `v0.1.5`.
+The downloaded `v0.1.5` Debian package matched published SHA-256
+`1a4cb2e658e4a139021b667a90aafa858d721d9a714b59c07b54df1ed263308d`,
+declared Tesseract, and installed successfully through `public/install.sh`.
+Live and local hashes match for the shell, JS, CSS, manifest, installers,
+image, and 404 assets.
 
-Live Playwright checked `/`, `/demo`, `/privacy`, `/terms`, and the real 404:
-each has one h1/main and zero serious/critical Axe findings. There were no
-page/script errors; Chromium's expected failed-resource message for the 404
-document was excluded. The demo made only same-origin requests, stored only
-`demo:game-text-beacon:visited`, keyboard focus reached the skip link and
-then the new route h1, and the 390px demo had no overflow, no undersized
-targets, and no errors. Headers include CSP, HSTS, `nosniff`, strict referrer
-policy, and the disabled camera/microphone/geolocation/payment policy.
+## Reproduce the blockers
 
-This local-first desktop app has no server API, account, payment flow,
-identity-provider integration, service worker, updater, telemetry, or consumer
-package. Rate-limit, response-policy API, identity, offline-PWA, updater, and
-consumer-package checks are therefore not applicable; the live privacy and
-static response-policy checks above were run instead.
+1. Open the live root, listen for `pageerror`, and click **Read sample
+   objective**.
+2. At 390 px, set the default/root text size to 200%; compare
+   `document.documentElement.scrollWidth` with `window.innerWidth` on `/` and
+   `/demo`.
+3. Compare README and privacy/landing copy with `.factory/claims.json`, then
+   inspect `claim_desktop_local_ocr...` and `@claim:capture-frame`.
+4. On `/?app`, reject the mocked bridge's first `get_settings` invocation; the
+   rejection is unhandled and the loading status remains.
 
-## Known limits / operator action
+## Applicability and operator notes
 
-Desktop packages are intentionally unsigned. macOS notarization needs
-`APPLE_CERTIFICATE`; Windows Authenticode needs `WINDOWS_CERT_PFX`. No updater
-is shipped, so no updater manifest is required.
+This local-first desktop app has no server API, sign-in, payment endpoint,
+service worker, updater, library, or CLI. Rate-limit/429, Entra, backend,
+offline-PWA, updater, and consumer-package checks do not apply. Published
+desktop packages remain intentionally unsigned; macOS notarization needs
+`APPLE_CERTIFICATE`, and Windows Authenticode needs `WINDOWS_CERT_PFX`.
