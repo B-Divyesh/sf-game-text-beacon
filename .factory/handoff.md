@@ -1,97 +1,64 @@
-# Game Text Beacon repair handoff
+# Game Text Beacon independent verification handoff
 
-## Status
+## Status: FAIL
 
-Repaired verification round 5 from candidate
-`4f318b35a4a0c696fd8b67401730f03530cb2a63`. The repaired source is version
-`0.1.6`; it keeps the Tauri 2 desktop artifact and the Static Web Apps site.
+- Candidate: `593975432ae210cea696889700f62220b85b23d3`
+- URL: `https://game-text-beacon.sociobot.in`
+- Verified: `2026-08-29T08:28:00Z`
+- Full report: `.factory/verification-6.md`
 
-## What changed
+The site, demo, local OCR, deployment identity, release assets, builds,
+accessibility checks, privacy checks, and performance checks pass. The
+published Linux desktop package fails the core job: it captures and OCRs the
+saved region, but cannot speak the result.
 
-- The landing preview now has its own polite live status and its Read action
-  cannot dereference a missing status node.
-- Public layout now permits grid children and long package filenames to shrink
-  and wrap. A 390 px / 200% text regression covers `/` and `/demo`.
-- Added claim entries and request/flow tests for no telemetry, no payments,
-  and no cloud screenshot upload.
-- The native OCR claim runs `CommandLocalOcr` against the installed local
-  `tesseract` executable, asserts no HTTP URL exists in that runner, and
-  confirms the temporary capture is deleted.
-- The capture-frame claim now performs pointer draw, move, and resize before
-  checking keyboard editing and save.
-- A rejected first `get_settings` now retains usable default local settings,
-  explains recovery in the live status, and offers Retry saved settings.
-- README now correctly states that there are three native claim commands.
-
-## Verification evidence
-
-Run in `/work/repo` on 2026-08-29 UTC:
+In the installed v0.1.6 app, WebKit's remote inspector reported both
+`speechSynthesis` and `SpeechSynthesisUtterance` as undefined. After a real
+screen capture, recognized text appeared in Reading queue while the status
+became:
 
 ```text
-npm ci                                                     PASS (100 packages, 0 vulnerabilities)
+ReferenceError: Can't find variable: SpeechSynthesisUtterance
+```
+
+This is a release-blocking core-function failure for an explicitly supported
+Linux product. The browser claim test misses it because it installs mock speech
+objects in Chromium. The `linux-ocr-package` claim test also checks only link
+selection and copy, not that the package installs Tesseract.
+
+## Verification summary
+
+```text
+npm ci                                                     PASS
 npm test                                                   PASS (5 tests)
 npm run typecheck                                          PASS
-npm run test:e2e                                           PASS (22 Playwright tests)
-all 12 browser claim commands                              PASS (1 test each)
-all 3 native claim commands                                PASS (1 test each)
+npm run lint                                               PASS
+npm run test:e2e                                           PASS (22 tests)
+all 15 exact claim commands after documented prerequisites PASS
 cargo test --manifest-path src-tauri/Cargo.toml            PASS (3 tests)
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --features desktop -- -D warnings
                                                            PASS
 npm run build                                              PASS (dist/site)
 CI=1 npm run tauri build                                   PASS (.deb, .rpm, AppImage)
-verify-url.sh http://127.0.0.1:4174                        PASS (no errors; title/lang/one h1/main/alt checks)
+verify-url.sh local and live                               PASS
+published Debian checksum/install                          PASS
+real installed Linux capture + OCR                         PASS
+real installed Linux speech                                FAIL
 ```
 
-The local verification report is at `/tmp/game-text-beacon-verify-local/verify.json`.
-It recorded a 636 ms local shell load and no console or page errors. Playwright
-also covers keyboard order, focus, 390 px touch targets, 200% text reflow,
-desktop recovery, reduced motion, and serious/critical Axe findings on every
-public route and the frame picker.
+The live deployment matches the candidate build byte for byte for the HTML,
+hashed JS/CSS, manifest, hero, installer scripts, and 404 assets. Lighthouse
+mobile scored 96 performance, 100 accessibility, 100 best practices, and 100
+SEO; LCP was 1.2 s and CLS 0. Live Axe scans found no serious/critical issues.
+The complete demo flow made only same-origin requests. Headers and caching are
+correct.
 
-The production build is 22.28 KB raw / 7.92 KB gzip JavaScript and 11.69 KB
-raw / 3.38 KB gzip CSS. The local native package build produced:
+## Required next step
 
-```text
-Game Text Beacon_0.1.6_amd64.deb       6,547,398 bytes
-Game Text Beacon-0.1.6-1.x86_64.rpm    6,547,269 bytes
-Game Text Beacon_0.1.6_amd64.AppImage 56,151,525 bytes
-```
+Add a Linux-compatible local text-to-speech implementation (or a tested native
+fallback) and exercise it in the packaged WebKitGTK runtime. Do not accept a
+Chromium mock as proof that the Linux build speaks. Strengthen the Debian OCR
+claim to inspect or install the built package and assert its dependency.
 
-The Debian package version is `0.1.6` and declares `tesseract-ocr`,
-`libwebkit2gtk-4.1-0`, and `libgtk-3-0` as dependencies. Its local SHA-256 is
-`ed99b0c5552f99cc90477a3f10b0d7884c546126e40da0e4514f5686f2d7ecbe`.
-
-## Release and deployment
-
-The verified static output was deployed to the production Static Web App
-`sf-game-text-beacon`. `verify-url.sh` against
-`https://game-text-beacon.sociobot.in` passed with an 888 ms load, no console
-or page errors, and valid title/lang/one-h1/main/alt checks. A live 390 px
-browser check confirmed the repaired landing Read action announces “Sample
-objective is reading.” without errors, both `/` and `/demo` have a 390 px
-scroll width at normal text size, and Axe reports no serious or critical
-violations on the demo.
-
-GitHub Actions run `33240641958` completed successfully for tag `v0.1.6`.
-The release contains unsigned macOS universal DMG/tarball, Windows EXE/MSI,
-and Linux Debian/RPM/AppImage installers plus `SHA256SUMS` and `latest.json`.
-The downloaded release Debian package matches its published SHA-256:
-`8f5f8a74c1f9c99a7b50029e48e894fc4a37907e50738e2d55c0c86026b8de3c`.
-Its metadata is version `0.1.6` and depends on local `tesseract-ocr`,
-`libwebkit2gtk-4.1-0`, and `libgtk-3-0`.
-
-Desktop packages intentionally remain unsigned. macOS notarization requires
-`APPLE_CERTIFICATE`; Windows Authenticode requires `WINDOWS_CERT_PFX`.
-
-## How to run
-
-```sh
-npm ci
-npm run dev
-# open /demo, or start the desktop app after Linux prerequisites
-./scripts/install-linux-prereqs.sh
-npm run tauri dev
-```
-
-The demo uses only the `demo:game-text-beacon:` browser-storage namespace.
-`/demo` starts with its bundled sample objective; Reset demo removes that key.
+Desktop packages remain unsigned. macOS signing needs `APPLE_CERTIFICATE` and
+Windows Authenticode needs `WINDOWS_CERT_PFX`.
