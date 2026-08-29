@@ -126,6 +126,8 @@ test('@claim:capture-frame lets a player draw, move, resize, and save a frame wi
   const editor = page.locator('#picker-stage')
   await expect(page.locator('#picker-help')).toContainText('Keyboard: focus the preview')
   await expect(editor).toHaveAttribute('aria-describedby', /picker-help picker-status/)
+  const pickerAxe = await new AxeBuilder({ page }).analyze()
+  expect(pickerAxe.violations.filter((item) => ['critical', 'serious'].includes(item.impact || ''))).toEqual([])
   await editor.focus()
   await expect(editor).toBeFocused()
   await page.keyboard.press('d')
