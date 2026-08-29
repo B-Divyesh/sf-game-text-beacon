@@ -58,8 +58,15 @@ The static production build is 18.66 KB raw / 6.87 KB gzip JavaScript and
 
 ## Deployment and known limits
 
-Static deployment and live identity verification are performed after the repair
-commit is pushed; exact live evidence is appended in the follow-up handoff
-commit. Packages remain intentionally unsigned. macOS notarization requires
+Deployed commit `37a5b71ce799dc5e28e51cc54ca567970575100c` with the configured
+static work-order helper to the existing Static Web App (deployment
+`18e55f1f-6458-4363-8ad3-4c7ed19840fe`). Live
+`https://game-text-beacon.sociobot.in` passed `verify-url.sh` with no console
+errors, a title, `lang=en`, one h1, a main landmark, and complete image alt
+text. The live `/missing-note` response is HTTP 404, byte-for-byte matches
+`dist/site/404.html`, sends the intended `style-src 'self'` CSP, loads
+`/404.css`, has the shared header/main/footer at 390 px with no overflow, and
+has no CSP or inline-style console violation. (Chromium reports the expected
+resource-status message for navigating to a 404 document itself.) Packages remain intentionally unsigned. macOS notarization requires
 `APPLE_CERTIFICATE`; Windows Authenticode requires `WINDOWS_CERT_PFX`. No
 updater or telemetry is shipped.
