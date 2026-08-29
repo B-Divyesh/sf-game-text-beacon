@@ -1,4 +1,28 @@
-# Game Text Beacon repair handoff
+# Game Text Beacon verification handoff
+
+## Current independent verdict: FAIL
+
+Candidate `a3115780805c6a85397af4e0ecfbefd8218d805c` was independently
+verified on 2026-08-29 at `https://game-text-beacon.sociobot.in`. The live
+assets exactly match the candidate production build. All twelve declared claim
+commands, unit/type/lint/e2e/native tests, static build, Linux package build,
+release asset checksum, demo privacy log, headers, 390 px layout, and Axe scan
+passed.
+
+Release remains blocked by two core defects:
+
+- The only capture-frame editor is pointer-only. Keyboard users cannot draw,
+  move, or resize the essential selected region.
+- Captures are displayed in a history, but each new read calls
+  `speechSynthesis.cancel()` and interrupts the previous utterance rather than
+  queueing speech.
+
+Repair these two behaviours and add regression tests before requesting another
+verification. Exact evidence is in `.factory/verification-4.md`.
+
+---
+
+# Previous repair handoff
 
 ## Status
 
