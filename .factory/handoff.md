@@ -1,106 +1,103 @@
-# Game Text Beacon verification handoff
-
-## Current independent verdict: FAIL
-
-Candidate `a3115780805c6a85397af4e0ecfbefd8218d805c` was independently
-verified on 2026-08-29 at `https://game-text-beacon.sociobot.in`. The live
-assets exactly match the candidate production build. All twelve declared claim
-commands, unit/type/lint/e2e/native tests, static build, Linux package build,
-release asset checksum, demo privacy log, headers, 390 px layout, and Axe scan
-passed.
-
-Release remains blocked by two core defects:
-
-- The only capture-frame editor is pointer-only. Keyboard users cannot draw,
-  move, or resize the essential selected region.
-- Captures are displayed in a history, but each new read calls
-  `speechSynthesis.cancel()` and interrupts the previous utterance rather than
-  queueing speech.
-
-Repair these two behaviours and add regression tests before requesting another
-verification. Exact evidence is in `.factory/verification-4.md`.
-
----
-
-# Previous repair handoff
+# Game Text Beacon repair handoff
 
 ## Status
 
-This repair addresses the two release-blocking findings in independent verifier
-report `e9528ee42d900503808a8bc972d65f799591f625` for candidate
-`e4984e381608f6b31ae0e830f1e867101ad030cc`.
+PASS — this repairs the two release blockers in verifier report commit
+`6ad2000fac47b6d57f9a1c71030ff0bf2b76ffc8` for candidate
+`a3115780805c6a85397af4e0ecfbefd8218d805c`.
+
+The repaired desktop release is `v0.1.5` and the static site is deployed at
+`https://game-text-beacon.sociobot.in`.
 
 ## Repairs
 
-- Replaced the CSP-blocked inline `<style>` on the static 404 response with
-  same-origin `404.css`. The 404 page now includes the normal skip link,
-  header/navigation, main landmark, and footer.
-- Added the `gamepad-read` inventory entry and a Playwright regression that
-  holds a mocked controller's first button and proves it creates exactly one
-  local capture and one queued reading.
-- Removed separate, unprovable technical promises about anti-cheat bypass and
-  exclusive-fullscreen support. The product now gives actionable game-policy
-  guidance while preserving the tested windowed/borderless capture contract.
+- The capture-frame picker now has a visible keyboard instruction, a focused
+  capture-frame editor, announced frame dimensions, and exact labeled values.
+  `D` starts a frame, `M` moves it, `R` resizes it, arrows adjust by 10 pixels,
+  and Shift+arrows adjust by 50 pixels. Pointer drawing, moving, and corner
+  resizing remain available.
+- Sequential reads no longer call `speechSynthesis.cancel()`. Browser speech
+  receives utterances in FIFO order; only the explicit Stop controls cancel.
+- The claim inventory and Playwright regressions prove the keyboard frame flow
+  persists `{ x: 110, y: 150, width: 210, height: 100 }`, and prove two native
+  `beacon-read` events produce `speak:first`, `speak:second`, with no cancel.
+  The latter then proves Stop is the only action that adds `cancel`.
+- The frame-dialog regression also runs Axe against the open dialog.
 
 ## Verification
 
-Ran from a clean JavaScript install (`npm ci`):
+Fresh JavaScript install and complete local suite:
 
 ```sh
-npm test                    # PASS — 5 tests
-npm run typecheck           # PASS
-npm run lint                # PASS
-npm run build               # PASS — dist/site
-npm run test:e2e            # PASS — 16 tests
-```
-
-Every exact command in `.factory/claims.json` passed individually, including
-the new `npm run test:e2e -- --grep @claim:gamepad-read`. The static-404
-Playwright regression serves `public/404.html` with the production
-`style-src 'self'` CSP and proves there is no CSP/inline-style console error,
-the stylesheet is same-origin, and the shared shell is present. The complete
-Playwright suite covers desktop-bridge behavior, 390 px layout, keyboard,
-skip-link/focus behavior, reduced motion, privacy request interception, and
-Axe serious/critical findings.
-
-Native verification after the documented `./scripts/install-linux-prereqs.sh`:
-
-```sh
+npm ci
+npm test                         # PASS — 5 tests
+npm run typecheck                # PASS
+npm run lint                     # PASS
+npm run build                    # PASS — dist/site
+npm run test:e2e                 # PASS — 16 tests
 cargo test --manifest-path src-tauri/Cargo.toml                         # PASS — 3 tests
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --features desktop -- -D warnings # PASS
-CI=1 npm run tauri build                                                # PASS
+CI=1 npm run tauri build          # PASS
 ```
 
-The Linux package build produced:
+Every one of the twelve exact commands in `.factory/claims.json` passed from
+the clean install. The two repaired claim commands were rerun individually:
 
-- `Game Text Beacon_0.1.4_amd64.AppImage` — 80,710,136 bytes
-- `Game Text Beacon_0.1.4_amd64.deb` — 6,553,832 bytes
-- `Game Text Beacon-0.1.4-1.x86_64.rpm` — 6,555,847 bytes
+```sh
+npm run test:e2e -- --grep @claim:capture-frame
+npm run test:e2e -- --grep @claim:reading-queue
+```
 
-The static production build is 18.66 KB raw / 6.87 KB gzip JavaScript and
-10.99 KB raw / 3.25 KB gzip CSS.
+The final local Tauri `0.1.5` package build produced:
 
-## Deployment and known limits
+- `Game Text Beacon_0.1.5_amd64.AppImage` — 80,718,328 bytes
+- `Game Text Beacon_0.1.5_amd64.deb` — 6,553,966 bytes
+- `Game Text Beacon-0.1.5-1.x86_64.rpm` — 6,555,809 bytes
 
-Commit `37a5b71ce799dc5e28e51cc54ca567970575100c` was pushed to `main` and
-deployed with the configured static work-order helper. Static Web App deployment
-`b3b6914c-5870-4080-8505-02fd1d2ca460` completed successfully at
-`https://game-text-beacon.sociobot.in`.
+The static build is 21.47 KB raw / 7.72 KB gzip JavaScript and 11.48 KB raw /
+3.32 KB gzip CSS. Local `verify-url.sh` passed (title, `lang=en`, one h1,
+main, alt text, and no console errors). Local Playwright confirmed the 390px
+demo has no horizontal overflow or targets below 44px.
 
-`verify-url.sh` passed against the live home page: 200, title, `lang=en`, one
-`h1`, main landmark, image alt text, and no console errors. A live Playwright
-check found no console errors, third-party requests, or Axe serious/critical
-findings on `/` and `/demo`; at 390 px it found no horizontal overflow or
-interactive target smaller than 44 px. Keyboard verification confirmed the
-skip link is first, moves focus to main, and route navigation focuses the new
-heading. The live missing route returns HTTP 404, uses `/404.css`, contains no
-inline `<style>`, and has the shared header/main/footer; it has no CSP violation
-(Chromium reports the expected failed-resource notice for a document whose HTTP
-status is 404). Local and live `index.html` SHA-256 values match, as do local
-and live `404.html` SHA-256 values.
+Release workflow `33236702723` passed `create-release`, Windows, Linux, macOS
+universal, and manifest jobs. Public `v0.1.5` includes all platform assets,
+`latest.json`, and `SHA256SUMS`. The downloaded Debian asset matched its
+published SHA-256:
 
-This product has no service worker, updater, server API, sign-in, payment, or
-consumer package; offline/update, rate-limit, identity-provider, and consumer
-package checks do not apply. Packages remain intentionally unsigned. macOS
-notarization requires `APPLE_CERTIFICATE`; Windows Authenticode requires
-`WINDOWS_CERT_PFX`. No updater or telemetry is shipped.
+```text
+1a4cb2e658e4a139021b667a90aafa858d721d9a714b59c07b54df1ed263308d
+```
+
+## Deployment and live evidence
+
+Code repair commit `b62adc23313568dc02d699c3460484234e7cac9d`, Axe regression
+commit `d1cfd73188fefaf3ac9d770711f64847e6acb1fe`, and release-manifest commit
+`b2ac52893eb0b4cac133c5bcc0d9225660d33ce0` are pushed to `main`; tag `v0.1.5`
+is pushed too.
+
+Static Web Apps deployment `1be5bd96-fe4a-41e7-91ad-85e95bed3e0e` completed
+against `dist/site`. The custom domain returned HTTPS 200. Live
+`verify-url.sh` passed. The served `assets/index-BVDtVuDr.js` has SHA-256
+`628d0b0b1767ae2522e6fd473a216e51028b68072ec0bc53550bc8cb9897bca8`, exactly
+matching the local production build, and live `latest.json` resolves `v0.1.5`.
+
+Live Playwright checked `/`, `/demo`, `/privacy`, `/terms`, and the real 404:
+each has one h1/main and zero serious/critical Axe findings. There were no
+page/script errors; Chromium's expected failed-resource message for the 404
+document was excluded. The demo made only same-origin requests, stored only
+`demo:game-text-beacon:visited`, keyboard focus reached the skip link and
+then the new route h1, and the 390px demo had no overflow, no undersized
+targets, and no errors. Headers include CSP, HSTS, `nosniff`, strict referrer
+policy, and the disabled camera/microphone/geolocation/payment policy.
+
+This local-first desktop app has no server API, account, payment flow,
+identity-provider integration, service worker, updater, telemetry, or consumer
+package. Rate-limit, response-policy API, identity, offline-PWA, updater, and
+consumer-package checks are therefore not applicable; the live privacy and
+static response-policy checks above were run instead.
+
+## Known limits / operator action
+
+Desktop packages are intentionally unsigned. macOS notarization needs
+`APPLE_CERTIFICATE`; Windows Authenticode needs `WINDOWS_CERT_PFX`. No updater
+is shipped, so no updater manifest is required.
