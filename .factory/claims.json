@@ -63,6 +63,13 @@
     "sandbox": "mocked local capture result; press Read this frame and assert that its text appears in the visible queue"
   },
   {
+    "id": "gamepad-read",
+    "claim": "A connected controller's first button reads the saved frame once per press",
+    "where": "desktop capture frame help and README",
+    "test": "npm run test:e2e -- --grep @claim:gamepad-read",
+    "sandbox": "mocked desktop bridge and controller; hold the first button and assert one capture and one visible queued reading"
+  },
+  {
     "id": "no-game-automation",
     "claim": "Beacon does not press game controls or change a game",
     "where": "landing preview, limits, and terms",

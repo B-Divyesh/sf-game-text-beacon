@@ -21,9 +21,9 @@
 | Your saved frame and default hotkey are ready. | 8 | pass |
 | Draw, move, or resize the frame on a fresh display preview. | 11 | pass |
 | Press the hotkey to add local OCR text to the queue. | 11 | pass |
-| It does not automate play, bypass anti-cheat, work in exclusive fullscreen, or send screenshots to a cloud service. | 17 | pass |
-| Use it in single-player or accessibility-safe contexts. | 7 | pass |
-| If a game’s anti-cheat policy is unclear, do not run it alongside that game. | 15 | pass |
+| It does not automate play or send screenshots to a cloud service. | 11 | pass |
+| Use it with windowed or borderless games. | 7 | pass |
+| Check each game’s policy before using a capture helper. | 10 | pass |
 
 No sentence exceeds 22 words. No banned marketing word appears.
 

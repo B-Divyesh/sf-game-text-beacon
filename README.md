@@ -2,7 +2,7 @@
 
 Game Text Beacon reads selected game text aloud for blind and low-vision PC players. It is for windowed or borderless games that draw dialogue, menus, or objectives without screen-reader labels.
 
-The desktop app saves a screen region, captures that region on a hotkey, uses local Tesseract OCR, and reads the result with the system voice. Choose capture frame shows a current display preview where you can draw, move, and resize the exact capture rectangle. It never automates game input. Check each game’s anti-cheat policy before using any capture helper.
+The desktop app saves a screen region, captures that region on a hotkey or a connected controller’s first button, uses local Tesseract OCR, and reads the result with the system voice. Choose capture frame shows a current display preview where you can draw, move, and resize the exact capture rectangle. It never automates game input. Check each game’s policy before using any capture helper.
 
 ## Try the demo
 

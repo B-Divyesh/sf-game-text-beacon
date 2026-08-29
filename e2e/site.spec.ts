@@ -1,5 +1,25 @@
 import { expect, test } from '@playwright/test'
 import { AxeBuilder } from '@axe-core/playwright'
+import { readFileSync } from 'node:fs'
+
+test('the static 404 uses same-origin CSS under the production CSP and keeps the shared shell', async ({ page }) => {
+  const notFound = readFileSync('public/404.html', 'utf8')
+  const errors: string[] = []
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()) })
+  await page.route('**/missing-note', (route) => route.fulfill({
+    status: 404,
+    contentType: 'text/html; charset=utf-8',
+    headers: { 'content-security-policy': "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" },
+    body: notFound
+  }))
+  const response = await page.goto('/missing-note')
+  expect(response?.status()).toBe(404)
+  await expect(page.locator('header .wordmark')).toBeVisible()
+  await expect(page.locator('main h1')).toHaveText('This note is missing')
+  await expect(page.locator('footer')).toContainText('Built by Param Factory')
+  await expect(page.locator('link[rel="stylesheet"]')).toHaveAttribute('href', '/404.css')
+  expect(errors.filter((error) => /content security policy|inline style/i.test(error))).toEqual([])
+})
 
 test('@claim:sample-read starts the bundled sample and reports the observable reading state', async ({ page }) => {
   await page.goto('/demo')
@@ -123,6 +143,31 @@ test('@claim:reading-queue adds only recognized capture text to the visible read
   await page.getByRole('button', { name: 'Read this frame' }).click()
   await expect(page.locator('#queue')).toContainText('Find the weathered radio tower.')
   await expect(page.locator('#app-status')).toContainText('Text added to the reading queue.')
+})
+
+test('@claim:gamepad-read reads the saved frame exactly once for one controller-button press', async ({ page }) => {
+  await page.addInitScript(() => {
+    const controller = { buttons: [{ pressed: false }] }
+    Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => [controller] })
+    const bridge = {
+      calls: [] as string[],
+      async invoke(command: string) {
+        this.calls.push(command)
+        if (command === 'get_settings') return { region: { x: 100, y: 100, width: 400, height: 180 }, hotkey: 'Ctrl+Shift+R' }
+        if (command === 'capture_region') return 'Find the weathered radio tower.'
+      },
+      async listen() { return () => undefined }
+    }
+    ;(window as unknown as { __BEACON_DESKTOP_BRIDGE__: typeof bridge, __testController__: typeof controller }).__BEACON_DESKTOP_BRIDGE__ = bridge
+    ;(window as unknown as { __testController__: typeof controller }).__testController__ = controller
+  })
+  await page.goto('/?app')
+  await page.evaluate(() => { (window as unknown as { __testController__: { buttons: Array<{ pressed: boolean }> } }).__testController__.buttons[0].pressed = true })
+  await expect(page.locator('#queue')).toContainText('Find the weathered radio tower.')
+  await page.waitForTimeout(250)
+  const calls = await page.evaluate(() => (window as unknown as { __BEACON_DESKTOP_BRIDGE__: { calls: string[] } }).__BEACON_DESKTOP_BRIDGE__.calls)
+  expect(calls.filter((command) => command === 'capture_region')).toHaveLength(1)
+  await expect(page.locator('#queue article')).toHaveCount(1)
 })
 
 test('@claim:no-game-automation sends a read request without any game-control command', async ({ page }) => {
