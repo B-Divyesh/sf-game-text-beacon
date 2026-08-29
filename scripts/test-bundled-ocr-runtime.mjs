@@ -180,5 +180,12 @@ try {
   else throw new Error(`No installed-package OCR test for ${process.platform}`)
   console.log('@claim:bundled-ocr-runtime PASS')
 } finally {
-  rmSync(scratch, { recursive: true, force: true })
+  try {
+    rmSync(scratch, { recursive: true, force: true })
+  } catch (error) {
+    // macOS may keep an already-detached disk-image mountpoint busy for a
+    // moment while diskimages-helper exits. The package assertion has already
+    // completed, and the operating system reclaims this temporary directory.
+    if (error?.code !== 'EBUSY') throw error
+  }
 }
