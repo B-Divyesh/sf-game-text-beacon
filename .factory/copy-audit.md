@@ -8,7 +8,7 @@
 | Hear a sample objective right away. | 6 | pass |
 | Free to use. | 3 | pass |
 | Made for windowed games. | 4 | pass |
-| Choose the text region yourself. | 5 | pass |
+| Choose the text region by pointer or keyboard. | 8 | pass |
 | Point the frame at the words you need. | 9 | pass |
 | Beacon reads the selected words. | 5 | pass |
 | It does not press game controls or change a game. | 10 | pass |
