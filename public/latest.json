@@ -1,12 +1,12 @@
 {
-  "version": "v0.1.7",
+  "version": "v0.1.8",
   "assets": {
-    "Game.Text.Beacon-0.1.7-1.x86_64.rpm": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.7/Game.Text.Beacon-0.1.7-1.x86_64.rpm",
-    "Game.Text.Beacon_0.1.7_amd64.AppImage": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.7/Game.Text.Beacon_0.1.7_amd64.AppImage",
-    "Game.Text.Beacon_0.1.7_amd64.deb": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.7/Game.Text.Beacon_0.1.7_amd64.deb",
-    "Game.Text.Beacon_0.1.7_universal.dmg": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.7/Game.Text.Beacon_0.1.7_universal.dmg",
-    "Game.Text.Beacon_0.1.7_x64-setup.exe": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.7/Game.Text.Beacon_0.1.7_x64-setup.exe",
-    "Game.Text.Beacon_0.1.7_x64_en-US.msi": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.7/Game.Text.Beacon_0.1.7_x64_en-US.msi",
-    "Game.Text.Beacon_universal.app.tar.gz": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.7/Game.Text.Beacon_universal.app.tar.gz"
+    "Game.Text.Beacon-0.1.8-1.x86_64.rpm": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.8/Game.Text.Beacon-0.1.8-1.x86_64.rpm",
+    "Game.Text.Beacon_0.1.8_amd64.AppImage": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.8/Game.Text.Beacon_0.1.8_amd64.AppImage",
+    "Game.Text.Beacon_0.1.8_amd64.deb": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.8/Game.Text.Beacon_0.1.8_amd64.deb",
+    "Game.Text.Beacon_0.1.8_universal.dmg": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.8/Game.Text.Beacon_0.1.8_universal.dmg",
+    "Game.Text.Beacon_0.1.8_x64-setup.exe": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.8/Game.Text.Beacon_0.1.8_x64-setup.exe",
+    "Game.Text.Beacon_0.1.8_x64_en-US.msi": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.8/Game.Text.Beacon_0.1.8_x64_en-US.msi",
+    "Game.Text.Beacon_universal.app.tar.gz": "https://github.com/B-Divyesh/sf-game-text-beacon/releases/download/v0.1.8/Game.Text.Beacon_universal.app.tar.gz"
   }
 }
