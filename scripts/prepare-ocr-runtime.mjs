@@ -3,6 +3,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { tessdataCandidates } from './tessdata-layout.mjs'
+import { macDependencyCandidates } from './macos-library-layout.mjs'
 
 // This runs only while building a desktop package. It turns the OCR engine
 // already provisioned on the release runner into a private app resource. The
@@ -77,7 +78,8 @@ const linkedLibraries = (file) => {
       .split('\n')
       .slice(1)
       .map((line) => line.trim().split(' ')[0])
-      .filter((path) => path?.startsWith('/') && existsSync(path))
+      .flatMap((dependency) => macDependencyCandidates({ dependency, libraryPath: file }))
+      .filter((path) => existsSync(path))
   }
   return []
 }
