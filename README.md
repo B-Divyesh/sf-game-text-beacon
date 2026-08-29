@@ -32,15 +32,18 @@ npm run build:site  # static landing site -> dist/site
 npm run build       # same static deployment build -> dist/site
 npm run tauri build # local native package build
 npm run test:linux-package # build/install .deb, inspect dependencies, exercise WebKitGTK speech
+npm run test:linux-hotkey-package # exercise a real global shortcut, conflict, and recovery
+npm run test:compatibility # run 25 timed reads across five real windowed games
+npm run test:claims # run every exact claim command from .factory/claims.json
 ```
 
-The three native claim commands in `.factory/claims.json` are Rust contract checks. They run without GTK/WebKit development headers; the local-OCR claim invokes the installed Tesseract executable. Install the prerequisites above before running that OCR check, launching, or packaging the desktop window.
+Native claim commands provision their Debian/Ubuntu requirements through the idempotent prerequisite script. The local-OCR claim invokes the installed Tesseract executable. The packaged hotkey claim installs the built `.deb`, starts two real app instances on one X11 display, sends an OS-level shortcut while another window has focus, and checks conflict recovery plus one captured reading.
 
 `npm run build:site` is the deployment build command. The static output has `index.html` at `dist/site/index.html`.
 
 ## Release
 
-Tag `v0.1.7` and push it to run `.github/workflows/release.yml`. The workflow builds unsigned macOS, Windows, and Linux packages, installs the Linux native prerequisites, and adds release checksums and `latest.json`. The landing site reads a same-origin `latest.json`, so an unpublished release never creates a browser console error.
+Tag `v0.1.8` and push it to run `.github/workflows/release.yml`. The workflow builds unsigned macOS, Windows, and Linux packages, installs the Linux native prerequisites, and adds release checksums and `latest.json`. The landing site reads a same-origin `latest.json`, so an unpublished release never creates a browser console error.
 
 Native core regression checks need only Rust; use `cargo test --manifest-path src-tauri/Cargo.toml`. Desktop development and packaging additionally need the platform prerequisites. On Debian/Ubuntu run `./scripts/install-linux-prereqs.sh`, then `npm run tauri build`. The Linux landing-page download and `install.sh` prefer the verified `.deb`, which installs both local runtime engines.
 

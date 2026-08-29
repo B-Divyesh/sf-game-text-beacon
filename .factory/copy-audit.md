@@ -19,7 +19,7 @@
 | Beacon captures that region from a windowed or borderless game. | 10 | pass |
 | Hear the result. | 3 | pass |
 | Each result joins a queue you can repeat or stop. | 11 | pass |
-| Your saved frame and default hotkey are ready. | 8 | pass |
+| Beacon loads your saved frame and checks the default hotkey. | 10 | pass |
 | Draw, move, or resize the frame on a fresh display preview. | 11 | pass |
 | Press the hotkey to add local OCR text to the queue. | 11 | pass |
 | It installs local Tesseract OCR and eSpeak NG speech too. | 10 | pass |

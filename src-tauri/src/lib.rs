@@ -34,6 +34,45 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 struct SettingsState(Mutex<Settings>);
 
 #[cfg(feature = "desktop")]
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HotkeyStatus {
+    hotkey: String,
+    is_registered: bool,
+    error: Option<String>,
+}
+
+#[cfg(feature = "desktop")]
+impl HotkeyStatus {
+    fn checking(hotkey: String) -> Self {
+        Self {
+            hotkey,
+            is_registered: false,
+            error: Some("Beacon has not confirmed this hotkey yet.".into()),
+        }
+    }
+
+    fn registered(hotkey: String) -> Self {
+        Self {
+            hotkey,
+            is_registered: true,
+            error: None,
+        }
+    }
+
+    fn unavailable(hotkey: String, error: String) -> Self {
+        Self {
+            hotkey,
+            is_registered: false,
+            error: Some(error),
+        }
+    }
+}
+
+#[cfg(feature = "desktop")]
+struct HotkeyState(Mutex<HotkeyStatus>);
+
+#[cfg(feature = "desktop")]
 #[derive(Clone, Default)]
 struct SpeechState {
     current: Arc<Mutex<Option<std::process::Child>>>,
@@ -111,12 +150,12 @@ fn persist_settings(app: &AppHandle, settings: &Settings) -> Result<(), String> 
 
 #[cfg(feature = "desktop")]
 fn register_hotkey(app: &AppHandle, hotkey: &str) -> Result<(), String> {
-    app.global_shortcut()
-        .unregister_all()
-        .map_err(|e| e.to_string())?;
     let shortcut = hotkey
         .parse::<Shortcut>()
         .map_err(|e| format!("That hotkey is not valid: {e}"))?;
+    app.global_shortcut()
+        .unregister_all()
+        .map_err(|e| e.to_string())?;
     app.global_shortcut()
         .on_shortcut(shortcut, move |app, _shortcut, event| {
             if event.state != ShortcutState::Pressed {
@@ -140,6 +179,15 @@ fn register_hotkey(app: &AppHandle, hotkey: &str) -> Result<(), String> {
 }
 
 #[cfg(feature = "desktop")]
+fn record_hotkey_status(app: &AppHandle, status: HotkeyStatus) -> Result<(), String> {
+    *app.state::<HotkeyState>()
+        .0
+        .lock()
+        .map_err(|_| "Could not update the hotkey status.".to_string())? = status;
+    Ok(())
+}
+
+#[cfg(feature = "desktop")]
 #[tauri::command]
 fn get_settings(state: State<'_, SettingsState>) -> Result<Settings, String> {
     state
@@ -147,6 +195,16 @@ fn get_settings(state: State<'_, SettingsState>) -> Result<Settings, String> {
         .lock()
         .map(|settings| settings.clone())
         .map_err(|_| "Could not read saved settings.".into())
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
+fn get_hotkey_status(state: State<'_, HotkeyState>) -> Result<HotkeyStatus, String> {
+    state
+        .0
+        .lock()
+        .map(|status| status.clone())
+        .map_err(|_| "Could not read the hotkey status.".into())
 }
 
 #[cfg(feature = "desktop")]
@@ -159,7 +217,27 @@ fn save_settings(
     if settings.region.width < 1 || settings.region.height < 1 {
         return Err("The capture frame needs a width and height.".into());
     }
-    register_hotkey(&app, &settings.hotkey)?;
+    let previous = state
+        .0
+        .lock()
+        .map_err(|_| "Could not read saved settings.".to_string())?
+        .clone();
+    if let Err(error) = register_hotkey(&app, &settings.hotkey) {
+        // Registering a replacement first releases the current shortcut. Put
+        // the last working shortcut back so a rejected edit does not silently
+        // disable an otherwise usable app.
+        let restored = register_hotkey(&app, &previous.hotkey).is_ok();
+        record_hotkey_status(
+            &app,
+            if restored {
+                HotkeyStatus::registered(previous.hotkey)
+            } else {
+                HotkeyStatus::unavailable(settings.hotkey.clone(), error.clone())
+            },
+        )?;
+        return Err(error);
+    }
+    record_hotkey_status(&app, HotkeyStatus::registered(settings.hotkey.clone()))?;
     persist_settings(&app, &settings)?;
     *state
         .0
@@ -274,8 +352,12 @@ fn stop_speech(state: State<'_, SpeechState>) -> Result<(), String> {
 
 #[cfg(feature = "desktop")]
 pub fn run() {
+    let default_hotkey = Settings::default().hotkey;
     tauri::Builder::default()
         .manage(SettingsState(Mutex::new(Settings::default())))
+        .manage(HotkeyState(Mutex::new(HotkeyStatus::checking(
+            default_hotkey,
+        ))))
         .manage(SpeechState::default())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
@@ -286,16 +368,22 @@ pub fn run() {
                 .0
                 .lock()
                 .expect("settings lock") = settings.clone();
-            if let Err(error) = register_hotkey(&handle, &settings.hotkey) {
-                eprintln!(
-                    "Game Text Beacon could not register {}: {error}",
-                    settings.hotkey
-                );
-            }
+            let status = match register_hotkey(&handle, &settings.hotkey) {
+                Ok(()) => HotkeyStatus::registered(settings.hotkey.clone()),
+                Err(error) => {
+                    eprintln!(
+                        "Game Text Beacon could not register {}: {error}",
+                        settings.hotkey
+                    );
+                    HotkeyStatus::unavailable(settings.hotkey.clone(), error)
+                }
+            };
+            record_hotkey_status(&handle, status).map_err(std::io::Error::other)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             get_settings,
+            get_hotkey_status,
             save_settings,
             capture_region,
             capture_preview,

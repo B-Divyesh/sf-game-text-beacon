@@ -13,3 +13,7 @@ a.link-button[hidden]{display:none}.site-head nav{gap:8px}.site-head nav a,foote
 
 /* The wordmark is the Home control as well as a label; retain a full touch target. */
 .wordmark{display:inline-flex;align-items:center;min-height:44px;padding:6px 8px;margin:-6px -8px}
+
+/* A failed global shortcut is operationally blocking, so its status uses both
+   text and the notebook's warning color. */
+.status.error{color:var(--red);font-weight:700}.region-panel input[aria-invalid="true"]{border-color:var(--red);box-shadow:0 0 0 2px rgba(157,48,53,.18)}

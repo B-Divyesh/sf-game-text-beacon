@@ -45,7 +45,7 @@
     "id": "desktop-local-ocr",
     "claim": "The desktop capture uses local OCR and no cloud OCR endpoint",
     "where": "privacy page and README",
-    "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_desktop_local_ocr",
+    "test": "npm run test:desktop-local-ocr",
     "sandbox": "native command runner invokes installed local Tesseract on a private capture fixture and contains no HTTP endpoint"
   },
   {
@@ -103,5 +103,12 @@
     "where": "desktop download status and README",
     "test": "npm run test:linux-package",
     "sandbox": "build and install the Debian package; inspect its metadata for Tesseract and eSpeak NG dependencies; invoke native speech from its real WebKitGTK window"
+  },
+  {
+    "id": "packaged-global-hotkey",
+    "claim": "The packaged desktop app captures and reads the saved region when its registered global hotkey is pressed",
+    "where": "landing steps and README",
+    "test": "npm run test:linux-hotkey-package",
+    "sandbox": "build and install the Debian package; run two real app instances on one X11 display; assert the second announces the default-hotkey conflict, recover through its alternate-hotkey control, focus a separate window, send the alternate shortcut through X11, and observe exactly one local OCR reading"
   }
 ]

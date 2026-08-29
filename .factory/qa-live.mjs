@@ -1,7 +1,7 @@
 import { chromium } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
-const base = 'https://game-text-beacon.sociobot.in'
+const base = process.env.QA_BASE_URL || 'https://game-text-beacon.sociobot.in'
 const browser = await chromium.launch({ headless: true })
 const report = { routes: [], demo: {}, keyboard: {}, mobile: {}, reducedMotion: {}, desktopShell: {} }
 

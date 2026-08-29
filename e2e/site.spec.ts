@@ -88,6 +88,7 @@ test('@claim:no-cloud-screenshots keeps a frame preview inside the local desktop
       async invoke(command: string) {
         this.calls.push(command)
         if (command === 'get_settings') return { region: { x: 100, y: 100, width: 400, height: 180 }, hotkey: 'Ctrl+Shift+R' }
+        if (command === 'get_hotkey_status') return { hotkey: 'Ctrl+Shift+R', isRegistered: true, error: null }
         if (command === 'capture_preview') return { pngBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9J7hAAAAAASUVORK5CYII=', width: 1000, height: 600 }
       },
       async listen() { return () => undefined }
@@ -97,7 +98,7 @@ test('@claim:no-cloud-screenshots keeps a frame preview inside the local desktop
   await page.goto('/?app')
   await page.getByRole('button', { name: 'Choose capture frame' }).click()
   await expect(page.locator('dialog')).toBeVisible()
-  expect(await page.evaluate(() => (window as unknown as { __BEACON_DESKTOP_BRIDGE__: { calls: string[] } }).__BEACON_DESKTOP_BRIDGE__.calls)).toEqual(['get_settings', 'capture_preview'])
+  expect(await page.evaluate(() => (window as unknown as { __BEACON_DESKTOP_BRIDGE__: { calls: string[] } }).__BEACON_DESKTOP_BRIDGE__.calls)).toEqual(['get_settings', 'get_hotkey_status', 'capture_preview'])
   expect(requests.every((url) => new URL(url).origin === new URL(page.url()).origin)).toBe(true)
 })
 
@@ -174,6 +175,7 @@ test('@claim:capture-frame lets a player draw, move, resize, and save a frame wi
       async invoke(command: string, args: Record<string, unknown>) {
         this.calls.push({ command, args })
         if (command === 'get_settings') return this.settings
+        if (command === 'get_hotkey_status') return { hotkey: this.settings.hotkey, isRegistered: true, error: null }
         if (command === 'capture_preview') return { pngBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9J7hAAAAAASUVORK5CYII=', width: 1000, height: 600 }
         if (command === 'save_settings') { this.settings = (args as { settings: typeof this.settings }).settings; return }
         if (command === 'capture_region') return 'Find the weathered radio tower.'
@@ -250,6 +252,7 @@ test('desktop settings startup rejection shows usable default settings and a ret
           if (attempts === 1) throw new Error('settings unavailable')
           return { region: { x: 12, y: 24, width: 320, height: 160 }, hotkey: 'Ctrl+Alt+B' }
         }
+        if (command === 'get_hotkey_status') return { hotkey: 'Ctrl+Alt+B', isRegistered: true, error: null }
         if (command === 'capture_region') return 'Recovered local text.'
       },
       async listen() { return () => undefined }
@@ -266,6 +269,40 @@ test('desktop settings startup rejection shows usable default settings and a ret
   expect(errors).toEqual([])
 })
 
+test('startup hotkey conflict is announced and the suggested alternate recovers', async ({ page }) => {
+  await page.addInitScript(() => {
+    const bridge = {
+      settings: { region: { x: 100, y: 100, width: 400, height: 180 }, hotkey: 'Ctrl+Shift+R' },
+      hotkeyStatus: { hotkey: 'Ctrl+Shift+R', isRegistered: false, error: 'That hotkey is unavailable: HotKey already registered.' },
+      async invoke(command: string, args: Record<string, unknown>) {
+        if (command === 'get_settings') return this.settings
+        if (command === 'get_hotkey_status') return this.hotkeyStatus
+        if (command === 'save_settings') {
+          this.settings = (args as { settings: typeof this.settings }).settings
+          this.hotkeyStatus = { hotkey: this.settings.hotkey, isRegistered: true, error: null }
+        }
+      },
+      async listen() { return () => undefined }
+    }
+    ;(window as unknown as { __BEACON_DESKTOP_BRIDGE__: typeof bridge }).__BEACON_DESKTOP_BRIDGE__ = bridge
+  })
+  await page.goto('/?app')
+  const hotkey = page.getByLabel('Capture hotkey')
+  const status = page.getByRole('status')
+  await expect(status).toContainText('Ctrl+Shift+R is not active')
+  await expect(status).toContainText('Read this frame remains available')
+  await expect(hotkey).toHaveAttribute('aria-invalid', 'true')
+  const alternate = page.getByRole('button', { name: 'Try Ctrl+Alt+R' })
+  await expect(alternate).toBeVisible()
+  const axe = await new AxeBuilder({ page }).analyze()
+  expect(axe.violations.filter((item) => ['critical', 'serious'].includes(item.impact || ''))).toEqual([])
+  await alternate.click()
+  await expect(hotkey).toHaveValue('Ctrl+Alt+R')
+  await expect(hotkey).not.toHaveAttribute('aria-invalid', 'true')
+  await expect(status).toHaveText('Ctrl+Alt+R is ready for the saved frame.')
+  await expect(alternate).toBeHidden()
+})
+
 test('@claim:reading-queue queues consecutive native captures for speech without cancelling the current utterance', async ({ page }) => {
   await page.addInitScript(() => {
     const bridge = {
@@ -273,6 +310,7 @@ test('@claim:reading-queue queues consecutive native captures for speech without
       async invoke(command: string, args: { text?: string }) {
         this.calls.push({ command, text: args.text })
         if (command === 'get_settings') return { region: { x: 100, y: 100, width: 400, height: 180 }, hotkey: 'Ctrl+Shift+R' }
+        if (command === 'get_hotkey_status') return { hotkey: 'Ctrl+Shift+R', isRegistered: true, error: null }
         if (command === 'capture_region') return 'Find the weathered radio tower.'
       },
       async listen() { return () => undefined }
@@ -303,6 +341,7 @@ test('desktop speech falls back to the native bridge when WebKit speech globals 
       async invoke(command: string, args: Record<string, unknown>) {
         this.calls.push({ command, args })
         if (command === 'get_settings') return { region: { x: 100, y: 100, width: 400, height: 180 }, hotkey: 'Ctrl+Shift+R' }
+        if (command === 'get_hotkey_status') return { hotkey: 'Ctrl+Shift+R', isRegistered: true, error: null }
         if (command === 'capture_region') return 'Native speech works without Web Speech.'
       },
       async listen() { return () => undefined }
@@ -327,6 +366,7 @@ test('@claim:gamepad-read reads the saved frame exactly once for one controller-
       async invoke(command: string) {
         this.calls.push(command)
         if (command === 'get_settings') return { region: { x: 100, y: 100, width: 400, height: 180 }, hotkey: 'Ctrl+Shift+R' }
+        if (command === 'get_hotkey_status') return { hotkey: 'Ctrl+Shift+R', isRegistered: true, error: null }
         if (command === 'capture_region') return 'Find the weathered radio tower.'
       },
       async listen() { return () => undefined }
@@ -350,6 +390,7 @@ test('@claim:no-game-automation sends a read request without any game-control co
       async invoke(command: string) {
         this.calls.push(command)
         if (command === 'get_settings') return { region: { x: 100, y: 100, width: 400, height: 180 }, hotkey: 'Ctrl+Shift+R' }
+        if (command === 'get_hotkey_status') return { hotkey: 'Ctrl+Shift+R', isRegistered: true, error: null }
         if (command === 'capture_region') return 'Find the weathered radio tower.'
       },
       async listen() { return () => undefined }
@@ -359,7 +400,7 @@ test('@claim:no-game-automation sends a read request without any game-control co
   await page.goto('/?app')
   await page.getByRole('button', { name: 'Read this frame' }).click()
   const calls = await page.evaluate(() => (window as unknown as { __BEACON_DESKTOP_BRIDGE__: { calls: string[] } }).__BEACON_DESKTOP_BRIDGE__.calls)
-  expect(calls).toEqual(['get_settings', 'capture_region', 'speak_text'])
+  expect(calls).toEqual(['get_settings', 'get_hotkey_status', 'capture_region', 'speak_text'])
 })
 
 test('keyboard starts with the skip link and enters the demo with Enter', async ({ page }) => {

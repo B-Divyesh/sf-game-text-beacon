@@ -3,6 +3,7 @@ import { demoKey, queueRead, sampleRead, type ReadItem } from './logic'
 
 type Region = { x: number; y: number; width: number; height: number }
 type DesktopSettings = { region: Region; hotkey: string }
+type HotkeyStatus = { hotkey: string; isRegistered: boolean; error: string | null }
 type DisplayPreview = { pngBase64: string; width: number; height: number }
 type DesktopBridge = {
   invoke: (command: string, args: Record<string, unknown>) => Promise<unknown>
@@ -44,7 +45,7 @@ function shell(content: string, title: string, description: string) {
     <header class="site-head"><a class="wordmark" href="/" data-link><span aria-hidden="true">⌜◉⌟</span> Game Text Beacon</a>
     <nav aria-label="Main navigation"><a href="/demo" data-link>Demo</a><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a></nav></header>
     <div class="route-status" aria-live="polite" aria-atomic="true"></div>${content}
-    <footer><p>Read game text aloud from a chosen region.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.7</p><p class="tiny">Notebook art is original generated product art.</p></footer>`
+    <footer><p>Read game text aloud from a chosen region.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.8</p><p class="tiny">Notebook art is original generated product art.</p></footer>`
   document.querySelectorAll<HTMLAnchorElement>('[data-link]').forEach((link) => link.addEventListener('click', (event) => {
     event.preventDefault(); navigate(link.getAttribute('href') || '/')
   }))
@@ -64,7 +65,7 @@ function landing() {
       <figure><img src="/beacon-notebook.webp" width="1024" height="1024" fetchpriority="high" decoding="async" alt="A notebook inside a blue hand-drawn screen selection frame." /><figcaption>Point the frame at the words you need.</figcaption></figure></section>
     <section class="live-note" aria-labelledby="preview-heading"><div><p class="eyebrow">Preview</p><h2 id="preview-heading">A reading queue, not game automation</h2><p>Beacon reads the selected words. It does not press game controls or change a game.</p></div><div class="sample-slip"><span>Sample objective</span><p>${sampleRead.text}</p><button id="preview-read">Read sample objective</button><p class="status" id="preview-status" aria-live="polite">Ready to read the sample objective.</p></div></section>
     <section class="steps" aria-labelledby="how-heading"><h2 id="how-heading">Read a region in three steps</h2><ol><li><strong>Draw a frame.</strong><span>Draw and resize one region over dialogue, a menu, or an objective.</span></li><li><strong>Press your hotkey.</strong><span>Beacon captures that region from a windowed or borderless game.</span></li><li><strong>Hear the result.</strong><span>Each result joins a queue you can repeat or stop.</span></li></ol></section>
-    <section class="walkthrough" aria-labelledby="walkthrough-heading"><p class="eyebrow">Desktop walkthrough</p><h2 id="walkthrough-heading">Set up a reading frame</h2><div class="desktop-shots"><figure><div class="desktop-shot" aria-hidden="true"><b>Capture frame</b><span>960 × 260 px</span><i>Choose capture frame</i></div><figcaption><strong>1. Open Beacon.</strong> Your saved frame and default hotkey are ready.</figcaption></figure><figure><div class="desktop-shot picker-shot" aria-hidden="true"><b>Draw your capture frame</b><span class="mini-frame"></span><i>Display preview</i></div><figcaption><strong>2. Choose capture frame.</strong> Draw, move, or resize the frame on a fresh display preview.</figcaption></figure><figure><div class="desktop-shot" aria-hidden="true"><b>Reading queue</b><span>Find the weathered radio tower.</span><i>Text added locally</i></div><figcaption><strong>3. Save and read.</strong> Press the hotkey to add local OCR text to the queue.</figcaption></figure></div></section>
+    <section class="walkthrough" aria-labelledby="walkthrough-heading"><p class="eyebrow">Desktop walkthrough</p><h2 id="walkthrough-heading">Set up a reading frame</h2><div class="desktop-shots"><figure><div class="desktop-shot" aria-hidden="true"><b>Capture frame</b><span>960 × 260 px</span><i>Choose capture frame</i></div><figcaption><strong>1. Open Beacon.</strong> Beacon loads your saved frame and checks the default hotkey.</figcaption></figure><figure><div class="desktop-shot picker-shot" aria-hidden="true"><b>Draw your capture frame</b><span class="mini-frame"></span><i>Display preview</i></div><figcaption><strong>2. Choose capture frame.</strong> Draw, move, or resize the frame on a fresh display preview.</figcaption></figure><figure><div class="desktop-shot" aria-hidden="true"><b>Reading queue</b><span>Find the weathered radio tower.</span><i>Text added locally</i></div><figcaption><strong>3. Save and read.</strong> Press the hotkey to add local OCR text to the queue.</figcaption></figure></div></section>
     <section class="download-note" aria-labelledby="install-heading"><p class="eyebrow">Desktop app</p><h2 id="install-heading">Install Game Text Beacon</h2><p id="download-status">Downloads are being published.</p><a id="download-link" class="primary link-button" hidden>Download desktop app</a><p class="tiny">Desktop packages are unsigned. macOS may require Control-click → Open. Windows may show a security warning.</p></section>
     <section class="limits" aria-labelledby="limits-heading"><h2 id="limits-heading">What Beacon does not do</h2><p>It does not automate play or send screenshots to a cloud service.</p><p>Use it with windowed or borderless games. Check each game’s policy before using a capture helper.</p></section>
   </main>`, 'Game Text Beacon — Read game text aloud', 'Read unsupported game text aloud from a chosen screen region.')
@@ -160,17 +161,35 @@ function stopSpeech(statusSelector = '#app-status') {
 async function desktop() {
   document.title = 'Game Text Beacon — Read game text aloud'
   app.innerHTML = `<main class="desktop-shell" id="main" tabindex="-1"><header class="app-head"><div><p class="eyebrow">Game Text Beacon</p><h1>Read a saved screen region</h1></div><span class="app-state">Local mode</span></header>
-    <section class="app-grid"><section class="region-panel" aria-labelledby="region-title"><h2 id="region-title">Capture frame</h2><p>Choose capture frame to draw, move, and resize it on a fresh display preview with a pointer or keyboard. Beacon only captures this rectangle.</p><div class="frame" aria-label="Saved capture frame preview"><span>Saved game text frame</span><b id="frame-size">Loading saved frame…</b><small id="frame-position"></small></div><button class="primary" id="choose-frame">Choose capture frame</button><button id="read-frame">Read this frame</button><label>Capture hotkey <input id="hotkey" value="Ctrl+Shift+R" aria-describedby="hotkey-help" /></label><p id="hotkey-help" class="tiny">The displayed hotkey registers when Beacon starts and after you save it. A connected controller’s first button also reads the saved frame while Beacon is open.</p><button class="primary" id="save-settings">Save frame and hotkey</button><button id="retry-settings" hidden>Retry saved settings</button><p id="app-status" class="status" aria-live="polite">Loading saved settings.</p></section>
+    <section class="app-grid"><section class="region-panel" aria-labelledby="region-title"><h2 id="region-title">Capture frame</h2><p>Choose capture frame to draw, move, and resize it on a fresh display preview with a pointer or keyboard. Beacon only captures this rectangle.</p><div class="frame" aria-label="Saved capture frame preview"><span>Saved game text frame</span><b id="frame-size">Loading saved frame…</b><small id="frame-position"></small></div><button class="primary" id="choose-frame">Choose capture frame</button><button id="read-frame">Read this frame</button><label>Capture hotkey <input id="hotkey" value="Ctrl+Shift+R" aria-describedby="hotkey-help app-status" /></label><p id="hotkey-help" class="tiny">Beacon confirms the displayed hotkey when it starts and after you save it. A connected controller’s first button also reads the saved frame while Beacon is open.</p><button class="primary" id="save-settings">Save frame and hotkey</button><button id="retry-settings" hidden>Retry saved settings</button><p id="app-status" class="status" role="status" aria-live="polite" aria-atomic="true">Loading saved settings.</p><button id="try-alternate-hotkey" hidden>Try Ctrl+Alt+R</button></section>
     <section class="queue-panel" aria-labelledby="queue-title"><div class="queue-heading"><h2 id="queue-title">Reading queue</h2><button id="stop-all" class="quiet">Stop reading</button></div><div id="queue" class="queue-empty"><p>No reads yet.</p><span>Your captured text will appear here.</span></div></section></section>
     <section class="app-note"><h2>Before you use Beacon in a game</h2><p>Use windowed or borderless mode. Check the game’s policy and do not use Beacon where capture helpers are forbidden.</p></section></main>`
   const defaultSettings = (): DesktopSettings => ({ region: { x: 100, y: 100, width: 960, height: 260 }, hotkey: 'Ctrl+Shift+R' })
   let settings = defaultSettings()
   let reads: ReadItem[] = []
   const appStatus = () => document.querySelector<HTMLElement>('#app-status')!
+  const hotkeyInput = () => document.querySelector<HTMLInputElement>('#hotkey')!
+  const alternateButton = () => document.querySelector<HTMLButtonElement>('#try-alternate-hotkey')!
+  const suggestedHotkey = (hotkey: string) => hotkey.toLowerCase() === 'ctrl+alt+r' ? 'Ctrl+Alt+B' : 'Ctrl+Alt+R'
+  const showHotkeyReady = (hotkey: string, message = `${hotkey} is ready for the saved frame.`) => {
+    hotkeyInput().removeAttribute('aria-invalid')
+    alternateButton().hidden = true
+    appStatus().classList.remove('error')
+    appStatus().textContent = message
+  }
+  const showHotkeyFailure = (hotkey: string, error: string) => {
+    const alternate = suggestedHotkey(hotkey)
+    hotkeyInput().setAttribute('aria-invalid', 'true')
+    alternateButton().textContent = `Try ${alternate}`
+    alternateButton().dataset.hotkey = alternate
+    alternateButton().hidden = false
+    appStatus().classList.add('error')
+    appStatus().textContent = `${hotkey} is not active. ${error} Enter another hotkey and save it, or try ${alternate}. Read this frame remains available.`
+  }
   const updateFrame = () => {
     document.querySelector('#frame-size')!.textContent = `${settings.region.width} × ${settings.region.height} px`
     document.querySelector('#frame-position')!.textContent = `Starts at ${settings.region.x}, ${settings.region.y} on the primary display.`
-    document.querySelector<HTMLInputElement>('#hotkey')!.value = settings.hotkey
+    hotkeyInput().value = settings.hotkey
   }
   const retrySettings = async () => {
     appStatus().textContent = 'Retrying saved settings.'
@@ -178,17 +197,36 @@ async function desktop() {
       settings = await invokeDesktop('get_settings', {}) as DesktopSettings
       updateFrame()
       document.querySelector<HTMLButtonElement>('#retry-settings')!.hidden = true
-      appStatus().textContent = `${settings.hotkey} is ready for the saved frame.`
     } catch (error) {
       document.querySelector<HTMLButtonElement>('#retry-settings')!.hidden = false
       appStatus().textContent = `Could not load saved settings. Using a new local frame. You can choose a frame, save it, or retry. ${String(error)}`
+      return
+    }
+    try {
+      const hotkeyStatus = await invokeDesktop('get_hotkey_status', {}) as HotkeyStatus
+      if (hotkeyStatus?.isRegistered && hotkeyStatus.hotkey === settings.hotkey) showHotkeyReady(settings.hotkey)
+      else showHotkeyFailure(settings.hotkey, hotkeyStatus?.error || 'Beacon could not confirm that this hotkey is available.')
+    } catch (error) {
+      showHotkeyFailure(settings.hotkey, `Beacon could not check the saved hotkey. ${String(error)}`)
     }
   }
   const saveSettings = async (message = 'Frame and hotkey saved. The hotkey now uses this frame.') => {
-    settings.hotkey = document.querySelector<HTMLInputElement>('#hotkey')!.value.trim()
-    if (!settings.hotkey) { appStatus().textContent = 'Enter a hotkey, then save it.'; return }
-    try { await invokeDesktop('save_settings', { settings }); updateFrame(); appStatus().textContent = message }
-    catch (error) { appStatus().textContent = `Could not save the frame and hotkey. ${String(error)}` }
+    const hotkey = hotkeyInput().value.trim()
+    if (!hotkey) {
+      hotkeyInput().setAttribute('aria-invalid', 'true')
+      appStatus().classList.add('error')
+      appStatus().textContent = 'Enter a hotkey, then save it.'
+      return
+    }
+    const nextSettings = { ...settings, hotkey }
+    try {
+      await invokeDesktop('save_settings', { settings: nextSettings })
+      settings = nextSettings
+      updateFrame()
+      showHotkeyReady(settings.hotkey, message)
+    } catch (error) {
+      showHotkeyFailure(hotkey, `Could not save the frame and hotkey. ${String(error)}`)
+    }
   }
   updateFrame()
   const readFrame = async () => {
@@ -200,6 +238,10 @@ async function desktop() {
   listen('#read-frame', 'click', () => { void readFrame() })
   listen('#save-settings', 'click', () => { void saveSettings() })
   listen('#retry-settings', 'click', () => { void retrySettings() })
+  listen('#try-alternate-hotkey', 'click', () => {
+    hotkeyInput().value = alternateButton().dataset.hotkey || 'Ctrl+Alt+R'
+    void saveSettings(`${hotkeyInput().value} is ready for the saved frame.`)
+  })
   listen('#stop-all', 'click', () => { stopSpeech() })
   window.addEventListener('beacon-read', (event) => { void addRead((event as CustomEvent<{ text: string }>).detail.text) })
   try {
