@@ -149,6 +149,7 @@ const testMacos = () => {
   const dmgPath = files(resolve('src-tauri/target')).filter((file) => file.endsWith('.dmg') && file.includes(packageVersion)).sort().at(-1)
   assert(dmgPath, 'No macOS DMG found in the package output')
   const mount = join(scratch, 'mounted')
+  mkdirSync(mount)
   run('hdiutil', ['attach', '-nobrowse', '-mountpoint', mount, dmgPath])
   try {
     verifyRead(runtimeFrom(mount, 'macos'))
