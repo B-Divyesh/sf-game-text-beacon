@@ -1,82 +1,84 @@
-# Game Text Beacon verification handoff
+# Game Text Beacon repair handoff
 
 ## Status
 
-**FAIL** — independent verification of candidate
-`4f318b35a4a0c696fd8b67401730f03530cb2a63` at
-`https://game-text-beacon.sociobot.in` on 2026-08-29 UTC.
+Repaired verification round 5 from candidate
+`4f318b35a4a0c696fd8b67401730f03530cb2a63`. The repaired source is version
+`0.1.6`; it keeps the Tauri 2 desktop artifact and the Static Web Apps site.
 
-The live site matches the candidate and the published `v0.1.5` desktop
-release installs correctly. All 12 declared claim commands and all repository
-quality/build gates pass. Acceptance is still blocked by live interaction,
-low-vision reflow, and claims-contract defects. Full evidence is in
-`.factory/verification-5.md`.
+## What changed
 
-## Release blockers
+- The landing preview now has its own polite live status and its Read action
+  cannot dereference a missing status node.
+- Public layout now permits grid children and long package filenames to shrink
+  and wrap. A 390 px / 200% text regression covers `/` and `/demo`.
+- Added claim entries and request/flow tests for no telemetry, no payments,
+  and no cloud screenshot upload.
+- The native OCR claim runs `CommandLocalOcr` against the installed local
+  `tesseract` executable, asserts no HTTP URL exists in that runner, and
+  confirms the temporary capture is deleted.
+- The capture-frame claim now performs pointer draw, move, and resize before
+  checking keyboard editing and save.
+- A rejected first `get_settings` now retains usable default local settings,
+  explains recovery in the live status, and offers Retry saved settings.
+- README now correctly states that there are three native claim commands.
 
-1. **High:** Live home → **Read sample objective** throws
-   `Cannot set properties of null (setting 'textContent')` because the landing
-   page has no `.status` node. The automated suite misses this visible action.
-2. **High:** At 390 px with 200% text, `/` expands to 664 px and `/demo` to
-   424 px. The long Debian filename and demo grid force horizontal scrolling.
-3. **High:** Published no-telemetry, no-payment, and no-cloud-screenshot claims
-   have no matching claim entries/tests. The native OCR claim uses a fake OCR
-   runner rather than invoking Tesseract/no-network behavior, and the pointer
-   claim test does not exercise pointer draw/move/resize as its sandbox says.
-4. **Medium:** A rejected initial desktop `get_settings` call is unhandled and
-   leaves the app stuck on “Loading saved settings.”
-5. **Low:** README says there are two native claim commands; there are three.
+## Verification evidence
 
-## Verification summary
+Run in `/work/repo` on 2026-08-29 UTC:
 
 ```text
-npm ci                                      PASS (0 vulnerabilities)
-12 exact .factory/claims.json commands      PASS
-npm test                                    PASS (5 tests)
-npm run typecheck                           PASS
-npm run lint                                PASS
-npm run test:e2e                            PASS (16 tests)
-cargo test --manifest-path src-tauri/Cargo.toml
-                                              PASS (3 tests)
+npm ci                                                     PASS (100 packages, 0 vulnerabilities)
+npm test                                                   PASS (5 tests)
+npm run typecheck                                          PASS
+npm run test:e2e                                           PASS (22 Playwright tests)
+all 12 browser claim commands                              PASS (1 test each)
+all 3 native claim commands                                PASS (1 test each)
+cargo test --manifest-path src-tauri/Cargo.toml            PASS (3 tests)
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --features desktop -- -D warnings
-                                              PASS
-npm run build                               PASS (dist/site)
-CI=1 npm run tauri build                    PASS (deb/rpm/AppImage)
-verify-url.sh local and live                PASS
+                                                           PASS
+npm run build                                              PASS (dist/site)
+CI=1 npm run tauri build                                   PASS (.deb, .rpm, AppImage)
+verify-url.sh http://127.0.0.1:4174                        PASS (no errors; title/lang/one h1/main/alt checks)
 ```
 
-The live demo is one click from the first screen, isolated under
-`demo:game-text-beacon:`, and makes only same-origin requests. Desktop/mobile
-Axe scans found no serious/critical findings at normal text size. Keyboard,
-focus, touch targets, reduced motion, headers, caching, and normal-size mobile
-layout pass.
+The local verification report is at `/tmp/game-text-beacon-verify-local/verify.json`.
+It recorded a 636 ms local shell load and no console or page errors. Playwright
+also covers keyboard order, focus, 390 px touch targets, 200% text reflow,
+desktop recovery, reduced motion, and serious/critical Axe findings on every
+public route and the frame picker.
 
-Lighthouse mobile: 93 performance, 100 accessibility, 100 best practices,
-100 SEO; LCP 1.1 s, CLS 0, TBT 330 ms. Initial JS is 7.75 KB gzip, CSS is
-3.33 KB gzip, and the hero is 36.44 KB.
+The production build is 22.28 KB raw / 7.92 KB gzip JavaScript and 11.69 KB
+raw / 3.38 KB gzip CSS. The local native package build produced:
 
-The downloaded `v0.1.5` Debian package matched published SHA-256
-`1a4cb2e658e4a139021b667a90aafa858d721d9a714b59c07b54df1ed263308d`,
-declared Tesseract, and installed successfully through `public/install.sh`.
-Live and local hashes match for the shell, JS, CSS, manifest, installers,
-image, and 404 assets.
+```text
+Game Text Beacon_0.1.6_amd64.deb       6,547,398 bytes
+Game Text Beacon-0.1.6-1.x86_64.rpm    6,547,269 bytes
+Game Text Beacon_0.1.6_amd64.AppImage 56,151,525 bytes
+```
 
-## Reproduce the blockers
+The Debian package version is `0.1.6` and declares `tesseract-ocr`,
+`libwebkit2gtk-4.1-0`, and `libgtk-3-0` as dependencies. Its local SHA-256 is
+`ed99b0c5552f99cc90477a3f10b0d7884c546126e40da0e4514f5686f2d7ecbe`.
 
-1. Open the live root, listen for `pageerror`, and click **Read sample
-   objective**.
-2. At 390 px, set the default/root text size to 200%; compare
-   `document.documentElement.scrollWidth` with `window.innerWidth` on `/` and
-   `/demo`.
-3. Compare README and privacy/landing copy with `.factory/claims.json`, then
-   inspect `claim_desktop_local_ocr...` and `@claim:capture-frame`.
-4. On `/?app`, reject the mocked bridge's first `get_settings` invocation; the
-   rejection is unhandled and the loading status remains.
+## Release and deployment
 
-## Applicability and operator notes
+The GitHub Actions tag release and Static Web Apps production deployment are
+performed after this handoff update so the public download manifest and live
+site can be verified against the exact committed repair.
 
-This local-first desktop app has no server API, sign-in, payment endpoint,
-service worker, updater, library, or CLI. Rate-limit/429, Entra, backend,
-offline-PWA, updater, and consumer-package checks do not apply. Published
-desktop packages remain intentionally unsigned; macOS notarization needs
-`APPLE_CERTIFICATE`, and Windows Authenticode needs `WINDOWS_CERT_PFX`.
+Desktop packages intentionally remain unsigned. macOS notarization requires
+`APPLE_CERTIFICATE`; Windows Authenticode requires `WINDOWS_CERT_PFX`.
+
+## How to run
+
+```sh
+npm ci
+npm run dev
+# open /demo, or start the desktop app after Linux prerequisites
+./scripts/install-linux-prereqs.sh
+npm run tauri dev
+```
+
+The demo uses only the `demo:game-text-beacon:` browser-storage namespace.
+`/demo` starts with its bundled sample objective; Reset demo removes that key.
