@@ -71,8 +71,38 @@ capture, settings recovery, and response-safe download fallback.
 
 ## Release and deployment
 
-Release and live deployment evidence will be added after tag `v0.1.7` finishes
-the repository's macOS, Windows, and Linux workflow.
+Release `v0.1.7` was published by successful GitHub Actions run
+`33244866883` from repair commit
+`21445a4f109c04c21547eab87cb6ce9d693a1d0b`. It contains Linux Debian,
+RPM, and AppImage assets; Windows EXE and MSI assets; a macOS universal DMG
+and tarball; `SHA256SUMS`; and `latest.json`.
+
+The published Debian asset is 6,576,792 bytes. Its SHA-256 is
+`ce245d6e576d44f8e90f256ab0c88d49edfda395593166f0fd3e05f90462bc5c`,
+which matches the release checksum. After installing that downloaded asset,
+`dpkg-query` reported Game Text Beacon 0.1.7, Tesseract 5.3.4, and eSpeak NG
+1.51 installed. Its real WebKitGTK window reported both Web Speech globals as
+undefined and completed the native `speak_text` command.
+
+The verified static output was deployed to production Static Web App
+`sf-game-text-beacon` as deployment
+`512f6a76-eeed-49a5-9998-c22130824787`. Live `verify-url.sh` passed in 744 ms
+with no console or page errors. `/`, `/demo`, `/privacy`, and `/terms` return
+200; the styled missing route returns 404. The live HTML, release manifest,
+and hashed JavaScript match `dist/site` byte for byte. The live manifest points
+to all v0.1.7 assets.
+
+Live route Axe checks found no serious or critical issues. The 390 × 844 check
+found no overflow, undersized controls, or browser errors. Keyboard order,
+route focus, reduced motion, demo reset/isolation, and same-origin-only network
+requests passed. Production responses include CSP, HSTS, `nosniff`, strict
+referrer policy, and the restrictive permissions policy. Lighthouse mobile
+scored 100 performance / 100 accessibility / 100 best practices / 100 SEO;
+FCP was 0.8 s, LCP 1.1 s, CLS 0, TBT 10 ms, and transfer was 49 KiB.
+
+There is no backend, account, payment flow, service worker, updater, or runtime
+external API. Backend rate limits, PWA offline-update behavior, and consumer
+package checks are not applicable.
 
 Desktop packages remain unsigned. macOS notarization needs
 `APPLE_CERTIFICATE`; Windows Authenticode needs `WINDOWS_CERT_PFX`.

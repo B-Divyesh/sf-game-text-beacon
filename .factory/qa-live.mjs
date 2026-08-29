@@ -115,7 +115,7 @@ for (const path of ['/', '/demo', '/privacy', '/terms', '/missing-note']) {
   report.desktopShell.controls = await page.getByRole('button').allTextContents()
   report.desktopShell.inputs = await page.locator('input').count()
   await page.locator('#hotkey').fill('')
-  await page.getByRole('button', { name: 'Save hotkey' }).click()
+  await page.getByRole('button', { name: 'Save frame and hotkey' }).click()
   report.desktopShell.emptyHotkey = await page.locator('#app-status').innerText()
   report.desktopShell.errors = errors
   report.desktopShell.axe = (await new AxeBuilder({ page }).analyze()).violations.filter(v => ['serious', 'critical'].includes(v.impact || '')).map(v => ({ id: v.id, impact: v.impact, nodes: v.nodes.length }))
