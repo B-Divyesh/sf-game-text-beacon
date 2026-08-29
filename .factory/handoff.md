@@ -72,10 +72,13 @@ objective is reading.” without errors, both `/` and `/demo` have a 390 px
 scroll width at normal text size, and Axe reports no serious or critical
 violations on the demo.
 
-Tag `v0.1.6` is pushed and GitHub Actions run
-`33240641958` is publishing the matching macOS, Windows, and Linux installers
-with `SHA256SUMS` and the release manifest. Check its completion before
-announcing the installers externally.
+GitHub Actions run `33240641958` completed successfully for tag `v0.1.6`.
+The release contains unsigned macOS universal DMG/tarball, Windows EXE/MSI,
+and Linux Debian/RPM/AppImage installers plus `SHA256SUMS` and `latest.json`.
+The downloaded release Debian package matches its published SHA-256:
+`8f5f8a74c1f9c99a7b50029e48e894fc4a37907e50738e2d55c0c86026b8de3c`.
+Its metadata is version `0.1.6` and depends on local `tesseract-ocr`,
+`libwebkit2gtk-4.1-0`, and `libgtk-3-0`.
 
 Desktop packages intentionally remain unsigned. macOS notarization requires
 `APPLE_CERTIFICATE`; Windows Authenticode requires `WINDOWS_CERT_PFX`.
