@@ -3,7 +3,7 @@
 ## Status
 
 The release-blocking packaging failure from independent verification commit
-`474c83cca59d041d5dd54d95fcdadf61fd929728` is repaired in version `0.1.9`.
+`474c83cca59d041d5dd54d95fcdadf61fd929728` is repaired in version `0.1.10`.
 The repair preserves the Tauri 2 desktop-app and static-site deployment class.
 
 ## What changed
@@ -27,6 +27,8 @@ The repair preserves the Tauri 2 desktop-app and static-site deployment class.
 - The release workflow provisions the build-time runtime on macOS, Windows,
   and Linux, then runs the platform-native installed-package regression before
   publishing release metadata.
+- Ubuntu 22.04's pathless `tesseract --list-langs` output is covered by a
+  tested package-layout fallback for `eng.traineddata`.
 - The landing page now accurately says the offered package includes local OCR
   and English data. Linux also says it includes local eSpeak NG speech.
 - Native package payloads are excluded from Vite's frontend watch set. This
@@ -61,7 +63,7 @@ npm run test:compatibility
 Local repair evidence on 2026-08-29 UTC:
 
 - `npm ci`: pass, 100 packages, 0 vulnerabilities.
-- `npm test`: pass, 5 tests. `npm run typecheck`, `npm run lint`, and
+- `npm test`: pass, 6 tests. `npm run typecheck`, `npm run lint`, and
   `npm run build`: pass.
 - `npm run test:e2e`: pass, 25 browser tests, including keyboard, 390 px,
   200% text, route focus, network/privacy, and Playwright Axe scans of every
@@ -94,7 +96,7 @@ used instead and passed the serious/critical scans above.
 
 ## Deployment and release
 
-Push `main` and tag `v0.1.9` to run `.github/workflows/release.yml`. The tag
+Push `main` and tag `v0.1.10` to run `.github/workflows/release.yml`. The tag
 build creates the static-site download manifest and release assets for macOS,
 Windows, and Linux. The static deployment remains the configured factory
 deployment for `https://game-text-beacon.sociobot.in`.

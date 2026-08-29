@@ -2,6 +2,7 @@ import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync,
 import { basename, dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { tessdataCandidates } from './tessdata-layout.mjs'
 
 // This runs only while building a desktop package. It turns the OCR engine
 // already provisioned on the release runner into a private app resource. The
@@ -46,8 +47,15 @@ const copy = (source, destination) => {
 const parseTessdataDirectory = (executable) => {
   const output = run(executable, ['--list-langs'])
   const match = output.match(/in "([^"]+)"/)
-  if (!match) fail(`could not find Tesseract data directory in: ${output}`)
-  return match[1]
+  if (match) return match[1]
+
+  const packageFiles = platform === 'linux'
+    ? spawnSync('dpkg-query', ['-L', 'tesseract-ocr-eng'], { encoding: 'utf8' }).stdout
+    : ''
+  const candidates = tessdataCandidates({ platform, executable, environment: process.env, packageFiles })
+  const tessdata = candidates.find((directory) => directory && existsSync(join(directory, 'eng.traineddata')))
+  if (tessdata) return tessdata
+  fail(`could not find Tesseract data directory in: ${output}`)
 }
 
 const copyEnglishData = (executable) => {

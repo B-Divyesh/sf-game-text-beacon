@@ -44,7 +44,7 @@ Native claim commands provision their Debian/Ubuntu build requirements through t
 
 ## Release
 
-Tag `v0.1.9` and push it to run `.github/workflows/release.yml`. The workflow builds unsigned macOS, Windows, and Linux packages, bundles Tesseract plus English data, reads an OCR fixture from each installed package, and adds release checksums and `latest.json`. The landing site reads a same-origin `latest.json`, so an unpublished release never creates a browser console error.
+Tag `v0.1.10` and push it to run `.github/workflows/release.yml`. The workflow builds unsigned macOS, Windows, and Linux packages, bundles Tesseract plus English data, reads an OCR fixture from each installed package, and adds release checksums and `latest.json`. The landing site reads a same-origin `latest.json`, so an unpublished release never creates a browser console error.
 
 Native core regression checks need only Rust; use `cargo test --manifest-path src-tauri/Cargo.toml`. Desktop development and packaging additionally need the platform prerequisites. On Debian/Ubuntu run `./scripts/install-linux-prereqs.sh`, then `npm run tauri build`. The Linux landing-page download and `install.sh` prefer the verified `.deb`, which includes its own OCR data and local speech engine.
 

@@ -7,9 +7,10 @@ import { writeOcrFixture } from './ocr-fixture.mjs'
 
 const requestedKind = process.argv.includes('--kind') ? process.argv[process.argv.indexOf('--kind') + 1] : undefined
 const scratch = mkdtempSync(join(tmpdir(), 'game-text-beacon-bundled-ocr-'))
+const packageVersion = JSON.parse(readFileSync(resolve('package.json'), 'utf8')).version
 
 const run = (program, args, options = {}) => {
-  const result = spawnSync(program, args, { encoding: 'utf8', ...options })
+  const result = spawnSync(program, args, { encoding: 'utf8', maxBuffer: 200 * 1024 * 1024, ...options })
   assert.equal(result.status, 0, `${program} ${args.join(' ')} failed:\n${result.stdout}\n${result.stderr}`)
   return result
 }
@@ -17,6 +18,12 @@ const run = (program, args, options = {}) => {
 const files = (directory) => readdirSync(directory, { recursive: true, withFileTypes: true })
   .filter((entry) => entry.isFile())
   .map((entry) => join(entry.parentPath, entry.name))
+
+const currentPackage = (directory, extension) => {
+  const name = readdirSync(directory).filter((file) => file.endsWith(extension) && file.includes(packageVersion)).sort().at(-1)
+  assert(name, `No current ${packageVersion} ${extension} package found in ${directory}`)
+  return name
+}
 
 const packageExists = () => {
   const target = resolve('src-tauri/target')
@@ -30,10 +37,10 @@ const packageExists = () => {
         : requestedKind === 'appimage'
           ? ['.AppImage']
           : ['.deb', '.rpm', '.AppImage']
-    return required.every((extension) => packageFiles.some((file) => file.endsWith(extension)))
+    return required.every((extension) => packageFiles.some((file) => file.endsWith(extension) && file.includes(packageVersion)))
   }
   const extension = process.platform === 'win32' ? '.msi' : '.dmg'
-  return packageFiles.some((file) => file.endsWith(extension))
+  return packageFiles.some((file) => file.endsWith(extension) && file.includes(packageVersion))
 }
 
 const ensureCurrentPlatformPackage = () => {
@@ -88,8 +95,7 @@ const verifyRead = ({ runtime, executable }) => {
 const testDebian = () => {
   const bundleDirectory = resolve('src-tauri/target/release/bundle')
   const debDirectory = join(bundleDirectory, 'deb')
-  const deb = readdirSync(debDirectory).filter((name) => name.endsWith('.deb')).sort().at(-1)
-  assert(deb, `No Debian package found in ${debDirectory}`)
+  const deb = currentPackage(debDirectory, '.deb')
   const unpacked = join(scratch, 'deb')
   run('dpkg-deb', ['-x', join(debDirectory, deb), unpacked])
   verifyRead(runtimeFrom(unpacked, 'linux'))
@@ -98,8 +104,7 @@ const testDebian = () => {
 
 const testRpm = () => {
   const rpmDirectory = resolve('src-tauri/target/release/bundle/rpm')
-  const rpm = readdirSync(rpmDirectory).filter((name) => name.endsWith('.rpm')).sort().at(-1)
-  assert(rpm, `No RPM package found in ${rpmDirectory}`)
+  const rpm = currentPackage(rpmDirectory, '.rpm')
   const unpacked = join(scratch, 'rpm')
   mkdirSync(unpacked)
   // Ubuntu's rpm2cpio emits a valid archive but returns 1 for the rpmbuild
@@ -113,9 +118,7 @@ const testRpm = () => {
 const testAppImage = () => {
   const bundleDirectory = resolve('src-tauri/target/release/bundle')
   const appImageDirectory = join(bundleDirectory, 'appimage')
-  const appImage = readdirSync(appImageDirectory, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.AppImage')).map((entry) => entry.name).sort().at(-1)
-  assert(appImage, `No AppImage found in ${appImageDirectory}`)
+  const appImage = currentPackage(appImageDirectory, '.AppImage')
   const appImageRoot = join(scratch, 'appimage')
   mkdirSync(appImageRoot)
   run(join(appImageDirectory, appImage), ['--appimage-extract'], { cwd: appImageRoot })
@@ -135,8 +138,7 @@ const testLinux = () => {
 
 const testWindows = () => {
   const msiDirectory = resolve('src-tauri/target/release/bundle/msi')
-  const msi = readdirSync(msiDirectory).filter((name) => name.endsWith('.msi')).sort().at(-1)
-  assert(msi, `No MSI package found in ${msiDirectory}`)
+  const msi = currentPackage(msiDirectory, '.msi')
   const installDirectory = join(scratch, 'installed')
   run('msiexec.exe', ['/i', join(msiDirectory, msi), '/qn', `INSTALLDIR=${installDirectory}`])
   verifyRead(runtimeFrom(installDirectory, 'windows'))
@@ -144,7 +146,7 @@ const testWindows = () => {
 }
 
 const testMacos = () => {
-  const dmgPath = files(resolve('src-tauri/target')).filter((file) => file.endsWith('.dmg')).sort().at(-1)
+  const dmgPath = files(resolve('src-tauri/target')).filter((file) => file.endsWith('.dmg') && file.includes(packageVersion)).sort().at(-1)
   assert(dmgPath, 'No macOS DMG found in the package output')
   const mount = join(scratch, 'mounted')
   run('hdiutil', ['attach', '-nobrowse', '-mountpoint', mount, dmgPath])

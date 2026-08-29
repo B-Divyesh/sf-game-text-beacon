@@ -12,8 +12,8 @@ if (process.platform !== 'linux') {
 
 const packageDirectory = resolve('src-tauri/target/release/bundle/deb')
 const expectedVersion = JSON.parse(readFileSync(resolve('package.json'), 'utf8')).version
-const packageName = readdirSync(packageDirectory).filter((name) => name.endsWith('.deb')).sort().at(-1)
-assert(packageName, `No Debian package was found in ${packageDirectory}`)
+const packageName = readdirSync(packageDirectory).filter((name) => name.endsWith('.deb') && name.includes(expectedVersion)).sort().at(-1)
+assert(packageName, `No current ${expectedVersion} Debian package was found in ${packageDirectory}`)
 const packagePath = join(packageDirectory, packageName)
 
 const inspect = spawnSync('dpkg-deb', ['-f', packagePath, 'Package', 'Version', 'Depends'], { encoding: 'utf8' })

@@ -147,7 +147,7 @@ test('the Linux landing page selects the Debian package with local OCR and speec
 test('the Windows landing page says its offered package includes local OCR and English data', async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(navigator, 'userAgent', { configurable: true, value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }))
   await page.route('**/latest.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ version: 'test', assets: {
-    'Game.Text.Beacon_0.1.9_x64_en-US.msi': 'https://example.test/beacon.msi'
+    'Game.Text.Beacon_0.1.10_x64_en-US.msi': 'https://example.test/beacon.msi'
   } }) }))
   await page.goto('/')
   await expect(page.locator('#download-link')).toHaveAttribute('href', 'https://example.test/beacon.msi')
