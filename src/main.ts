@@ -44,7 +44,7 @@ function shell(content: string, title: string, description: string) {
     <header class="site-head"><a class="wordmark" href="/" data-link><span aria-hidden="true">⌜◉⌟</span> Game Text Beacon</a>
     <nav aria-label="Main navigation"><a href="/demo" data-link>Demo</a><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a></nav></header>
     <div class="route-status" aria-live="polite" aria-atomic="true"></div>${content}
-    <footer><p>Read game text aloud from a chosen region.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.6</p><p class="tiny">Notebook art is original generated product art.</p></footer>`
+    <footer><p>Read game text aloud from a chosen region.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.7</p><p class="tiny">Notebook art is original generated product art.</p></footer>`
   document.querySelectorAll<HTMLAnchorElement>('[data-link]').forEach((link) => link.addEventListener('click', (event) => {
     event.preventDefault(); navigate(link.getAttribute('href') || '/')
   }))
@@ -87,7 +87,7 @@ async function loadDownloads() {
     const extensions = agent.includes('win') ? ['.msi', '.exe'] : agent.includes('mac') ? ['.dmg'] : ['.deb']
     const asset = assets.find(([name]) => extensions.some((extension) => name.toLowerCase().endsWith(extension)))
     if (!asset) return
-    statusNode.textContent = agent.includes('linux') ? `A package for this computer is ready: ${asset[0]}. It installs local Tesseract OCR too.` : `A package for this computer is ready: ${asset[0]}.`
+    statusNode.textContent = agent.includes('linux') ? `A package for this computer is ready: ${asset[0]}. It installs local Tesseract OCR and eSpeak NG speech too.` : `A package for this computer is ready: ${asset[0]}.`
     link.href = asset[1]; link.hidden = false
   } catch {
     // The calm, usable fallback above is intentional for an offline landing page.
@@ -99,7 +99,7 @@ function demo() {
   localStorage.setItem(demoKey('visited'), 'true')
   listen('#read-sample', 'click', () => speak(sampleRead.text, 'Sample objective is reading.', '#demo-status'))
   listen('#repeat-sample', 'click', () => speak(sampleRead.text, 'Repeating sample objective.', '#demo-status'))
-  listen('#stop-sample', 'click', () => { speechSynthesis.cancel(); status('Reading stopped.', '#demo-status') })
+  listen('#stop-sample', 'click', () => { stopSpeech('#demo-status') })
   listen('#reset-demo', 'click', () => { localStorage.removeItem(demoKey('visited')); status('Demo reset. The sample is ready again.', '#demo-status') })
 }
 
@@ -118,13 +118,43 @@ function status(message: string, selector = '.status') {
   const node = document.querySelector<HTMLElement>(selector)
   if (node) node.textContent = message
 }
+let desktopSpeechQueue = Promise.resolve()
+let desktopSpeechGeneration = 0
+
 function speak(text: string, message: string, statusSelector?: string) {
-  // The platform queues successive utterances in FIFO order. Only an explicit
-  // Stop control may cancel what is currently being spoken.
+  status(message, statusSelector)
+  if (isDesktop) {
+    const generation = desktopSpeechGeneration
+    desktopSpeechQueue = desktopSpeechQueue.then(async () => {
+      if (generation !== desktopSpeechGeneration) return
+      await invokeDesktop('speak_text', { text })
+    }).catch((error) => {
+      status(`Could not read aloud. Reinstall the desktop package to restore its local voice, then try again. ${String(error)}`, statusSelector || '#app-status')
+    })
+    return
+  }
+  if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
+    status('This browser has no speech voice. Use the desktop app to read this text aloud.', statusSelector)
+    return
+  }
+  // Browsers queue successive utterances in FIFO order. The packaged desktop
+  // app uses the native queue above because WebKitGTK has no Web Speech API.
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.rate = 0.92
   speechSynthesis.speak(utterance)
-  status(message, statusSelector)
+}
+
+function stopSpeech(statusSelector = '#app-status') {
+  if (isDesktop) {
+    desktopSpeechGeneration += 1
+    desktopSpeechQueue = Promise.resolve()
+    void invokeDesktop('stop_speech', {}).catch((error) => {
+      status(`Could not stop the local voice. ${String(error)}`, statusSelector)
+    })
+  } else if ('speechSynthesis' in window) {
+    speechSynthesis.cancel()
+  }
+  status('Reading stopped.', statusSelector)
 }
 
 async function desktop() {
@@ -170,7 +200,7 @@ async function desktop() {
   listen('#read-frame', 'click', () => { void readFrame() })
   listen('#save-settings', 'click', () => { void saveSettings() })
   listen('#retry-settings', 'click', () => { void retrySettings() })
-  listen('#stop-all', 'click', () => { speechSynthesis.cancel(); appStatus().textContent = 'Reading stopped.' })
+  listen('#stop-all', 'click', () => { stopSpeech() })
   window.addEventListener('beacon-read', (event) => { void addRead((event as CustomEvent<{ text: string }>).detail.text) })
   try {
     await listenDesktop<{ text: string }>('beacon-read', (event) => { void addRead(event.payload.text) })

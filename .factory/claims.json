@@ -95,13 +95,13 @@
     "claim": "Beacon does not press game controls or change a game",
     "where": "landing preview, limits, and terms",
     "test": "npm run test:e2e -- --grep @claim:no-game-automation",
-    "sandbox": "mocked desktop bridge; invoke Read this frame and assert that the only native operations are settings lookup and region capture"
+    "sandbox": "mocked desktop bridge; invoke Read this frame and assert that the only native operations are settings lookup, region capture, and local speech"
   },
   {
     "id": "linux-ocr-package",
-    "claim": "The Linux download installs local Tesseract OCR",
-    "where": "desktop download status",
-    "test": "npm run test:e2e -- --grep @claim:linux-ocr-package",
-    "sandbox": "published-manifest fixture with both AppImage and Debian assets; assert the landing page selects the Debian package"
+    "claim": "The Linux download installs local Tesseract OCR and eSpeak NG speech",
+    "where": "desktop download status and README",
+    "test": "npm run test:linux-package",
+    "sandbox": "build and install the Debian package; inspect its metadata for Tesseract and eSpeak NG dependencies; invoke native speech from its real WebKitGTK window"
   }
 ]

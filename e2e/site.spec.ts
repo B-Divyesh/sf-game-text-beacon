@@ -132,7 +132,7 @@ test('checked-in release manifest exposes the detected desktop download', async 
   await expect(page.locator('#download-link')).toHaveAttribute('href', /github\.com\/B-Divyesh\/sf-game-text-beacon\/releases\/download\/v[^/]+\//)
 })
 
-test('@claim:linux-ocr-package selects the Debian package that installs local Tesseract OCR', async ({ page }) => {
+test('the Linux landing page selects the Debian package that installs local Tesseract OCR', async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(navigator, 'userAgent', { configurable: true, value: 'Mozilla/5.0 (X11; Linux x86_64)' }))
   await page.route('**/latest.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ version: 'test', assets: {
     'Game.Text.Beacon_0.1.1_amd64.AppImage': 'https://example.test/beacon.AppImage',
@@ -268,21 +268,10 @@ test('desktop settings startup rejection shows usable default settings and a ret
 
 test('@claim:reading-queue queues consecutive native captures for speech without cancelling the current utterance', async ({ page }) => {
   await page.addInitScript(() => {
-    const speechOperations: string[] = []
-    class TestUtterance {
-      rate = 1
-      constructor(readonly text: string) {}
-    }
-    Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: TestUtterance })
-    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
-      speak: (utterance: TestUtterance) => speechOperations.push(`speak:${utterance.text}`),
-      cancel: () => speechOperations.push('cancel')
-    } })
-    ;(window as unknown as { __speechOperations__: string[] }).__speechOperations__ = speechOperations
     const bridge = {
-      calls: [] as string[],
-      async invoke(command: string) {
-        this.calls.push(command)
+      calls: [] as Array<{ command: string, text?: string }>,
+      async invoke(command: string, args: { text?: string }) {
+        this.calls.push({ command, text: args.text })
         if (command === 'get_settings') return { region: { x: 100, y: 100, width: 400, height: 180 }, hotkey: 'Ctrl+Shift+R' }
         if (command === 'capture_region') return 'Find the weathered radio tower.'
       },
@@ -298,13 +287,35 @@ test('@claim:reading-queue queues consecutive native captures for speech without
   await expect(page.locator('#queue')).toContainText('First capture.')
   await expect(page.locator('#queue')).toContainText('Second capture.')
   await expect(page.locator('#app-status')).toContainText('Text added to the reading queue.')
-  expect(await page.evaluate(() => (window as unknown as { __speechOperations__: string[] }).__speechOperations__)).toEqual([
-    'speak:First capture.', 'speak:Second capture.'
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __BEACON_DESKTOP_BRIDGE__: { calls: Array<{ command: string, text?: string }> } }).__BEACON_DESKTOP_BRIDGE__.calls.filter((call) => call.command === 'speak_text'))).toEqual([
+    { command: 'speak_text', text: 'First capture.' }, { command: 'speak_text', text: 'Second capture.' }
   ])
   await page.getByRole('button', { name: 'Stop reading' }).click()
-  expect(await page.evaluate(() => (window as unknown as { __speechOperations__: string[] }).__speechOperations__)).toEqual([
-    'speak:First capture.', 'speak:Second capture.', 'cancel'
-  ])
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __BEACON_DESKTOP_BRIDGE__: { calls: Array<{ command: string }> } }).__BEACON_DESKTOP_BRIDGE__.calls.at(-1)?.command)).toBe('stop_speech')
+})
+
+test('desktop speech falls back to the native bridge when WebKit speech globals are absent', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: undefined })
+    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: undefined })
+    const bridge = {
+      calls: [] as Array<{ command: string, args: Record<string, unknown> }>,
+      async invoke(command: string, args: Record<string, unknown>) {
+        this.calls.push({ command, args })
+        if (command === 'get_settings') return { region: { x: 100, y: 100, width: 400, height: 180 }, hotkey: 'Ctrl+Shift+R' }
+        if (command === 'capture_region') return 'Native speech works without Web Speech.'
+      },
+      async listen() { return () => undefined }
+    }
+    ;(window as unknown as { __BEACON_DESKTOP_BRIDGE__: typeof bridge }).__BEACON_DESKTOP_BRIDGE__ = bridge
+  })
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.goto('/?app')
+  await page.getByRole('button', { name: 'Read this frame' }).click()
+  await expect(page.locator('#queue')).toContainText('Native speech works without Web Speech.')
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __BEACON_DESKTOP_BRIDGE__: { calls: Array<{ command: string }> } }).__BEACON_DESKTOP_BRIDGE__.calls.some((call) => call.command === 'speak_text'))).toBe(true)
+  expect(errors).toEqual([])
 })
 
 test('@claim:gamepad-read reads the saved frame exactly once for one controller-button press', async ({ page }) => {
@@ -348,7 +359,7 @@ test('@claim:no-game-automation sends a read request without any game-control co
   await page.goto('/?app')
   await page.getByRole('button', { name: 'Read this frame' }).click()
   const calls = await page.evaluate(() => (window as unknown as { __BEACON_DESKTOP_BRIDGE__: { calls: string[] } }).__BEACON_DESKTOP_BRIDGE__.calls)
-  expect(calls).toEqual(['get_settings', 'capture_region'])
+  expect(calls).toEqual(['get_settings', 'capture_region', 'speak_text'])
 })
 
 test('keyboard starts with the skip link and enters the demo with Enter', async ({ page }) => {

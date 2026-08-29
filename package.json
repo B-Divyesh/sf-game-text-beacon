@@ -1,6 +1,6 @@
 {
   "name": "game-text-beacon",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "preview": "vite preview --outDir dist/site",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:linux-package": "npm run tauri build -- --bundles deb && node scripts/test-linux-package.mjs",
     "test:watch": "vitest",
     "tauri": "node scripts/tauri.mjs",
     "typecheck": "tsc --noEmit",

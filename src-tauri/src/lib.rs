@@ -9,8 +9,8 @@ mod tests;
 
 #[cfg(feature = "desktop")]
 use crate::core::{
-    bounded_region, read_with_local_runner, CommandLocalOcr, Region, Settings, SettingsStore,
-    TemporaryCapture,
+    bounded_region, read_with_local_runner, spawn_local_speech, CommandLocalOcr, Region, Settings,
+    SettingsStore, TemporaryCapture,
 };
 #[cfg(feature = "desktop")]
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
@@ -20,8 +20,9 @@ use serde::Serialize;
 use std::{
     io::Cursor,
     path::PathBuf,
-    sync::Mutex,
+    sync::{Arc, Mutex},
     thread,
+    time::Duration,
     time::{SystemTime, UNIX_EPOCH},
 };
 #[cfg(feature = "desktop")]
@@ -31,6 +32,13 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 #[cfg(feature = "desktop")]
 struct SettingsState(Mutex<Settings>);
+
+#[cfg(feature = "desktop")]
+#[derive(Clone, Default)]
+struct SpeechState {
+    current: Arc<Mutex<Option<std::process::Child>>>,
+    serial: Arc<Mutex<()>>,
+}
 
 #[cfg(feature = "desktop")]
 #[derive(Serialize)]
@@ -199,9 +207,76 @@ fn capture_preview(app: AppHandle) -> Result<DisplayPreview, String> {
 }
 
 #[cfg(feature = "desktop")]
+fn run_local_speech(state: SpeechState, text: String) -> Result<(), String> {
+    let _turn = state
+        .serial
+        .lock()
+        .map_err(|_| "The local speech queue is unavailable.".to_string())?;
+    let child = spawn_local_speech(&text)?;
+    *state
+        .current
+        .lock()
+        .map_err(|_| "The local voice could not start.".to_string())? = Some(child);
+
+    loop {
+        let mut current = state
+            .current
+            .lock()
+            .map_err(|_| "The local voice became unavailable.".to_string())?;
+        let Some(child) = current.as_mut() else {
+            // Stop reading removes and terminates the current child.
+            return Ok(());
+        };
+        match child
+            .try_wait()
+            .map_err(|error| format!("The local voice stopped unexpectedly: {error}"))?
+        {
+            Some(status) => {
+                current.take();
+                return if status.success() {
+                    Ok(())
+                } else {
+                    Err("The local voice could not use the system audio output. Check the selected output device, then try again.".into())
+                };
+            }
+            None => {
+                drop(current);
+                thread::sleep(Duration::from_millis(20));
+            }
+        }
+    }
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
+async fn speak_text(text: String, state: State<'_, SpeechState>) -> Result<(), String> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || run_local_speech(state, text))
+        .await
+        .map_err(|error| format!("The local voice task ended unexpectedly: {error}"))?
+}
+
+#[cfg(feature = "desktop")]
+#[tauri::command]
+fn stop_speech(state: State<'_, SpeechState>) -> Result<(), String> {
+    let mut current = state
+        .current
+        .lock()
+        .map_err(|_| "The local voice could not be stopped.".to_string())?;
+    if let Some(mut child) = current.take() {
+        child
+            .kill()
+            .map_err(|error| format!("The local voice could not be stopped: {error}"))?;
+        let _ = child.wait();
+    }
+    Ok(())
+}
+
+#[cfg(feature = "desktop")]
 pub fn run() {
     tauri::Builder::default()
         .manage(SettingsState(Mutex::new(Settings::default())))
+        .manage(SpeechState::default())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             let handle = app.handle().clone();
@@ -223,7 +298,9 @@ pub fn run() {
             get_settings,
             save_settings,
             capture_region,
-            capture_preview
+            capture_preview,
+            speak_text,
+            stop_speech
         ])
         .run(tauri::generate_context!())
         .expect("error while running Game Text Beacon");

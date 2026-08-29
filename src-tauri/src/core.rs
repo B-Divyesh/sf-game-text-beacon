@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Child, Command},
 };
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -55,6 +55,55 @@ pub trait LocalOcrRunner {
 /// client, endpoint, or upload path.
 pub struct CommandLocalOcr {
     pub executable: &'static str,
+}
+
+/// Starts speech with the operating system's local voice command. Linux
+/// packages install eSpeak NG alongside Beacon; macOS and Windows use their
+/// built-in speech commands. Text is always passed as one process argument,
+/// never through a shell.
+pub fn spawn_local_speech(text: &str) -> Result<Child, String> {
+    if text.trim().is_empty() {
+        return Err("There is no text to read aloud.".into());
+    }
+
+    #[cfg(target_os = "linux")]
+    let candidates: &[(&str, &[&str])] = &[
+        ("espeak-ng", &["-s", "160", "--"]),
+        ("espeak", &["-s", "160", "--"]),
+    ];
+    #[cfg(target_os = "macos")]
+    let candidates: &[(&str, &[&str])] = &[("say", &["-r", "185", "--"])];
+    #[cfg(target_os = "windows")]
+    let candidates: &[(&str, &[&str])] = &[(
+        "powershell.exe",
+        &[
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Add-Type -AssemblyName System.Speech; $voice = New-Object System.Speech.Synthesis.SpeechSynthesizer; $voice.Rate = -1; $voice.Speak($args[0])",
+            "--",
+        ],
+    )];
+
+    let mut last_error = None;
+    for (program, arguments) in candidates {
+        match Command::new(program).args(*arguments).arg(text).spawn() {
+            Ok(child) => return Ok(child),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => last_error = Some(error),
+            Err(error) => {
+                return Err(format!(
+                    "The local voice could not start. Check the system audio output, then try again: {error}"
+                ))
+            }
+        }
+    }
+
+    Err(format!(
+        "No local voice is installed. Reinstall the Beacon package to add its speech engine, then try again.{}",
+        last_error
+            .map(|error| format!(" ({error})"))
+            .unwrap_or_default()
+    ))
 }
 
 impl LocalOcrRunner for CommandLocalOcr {

@@ -1,64 +1,96 @@
-# Game Text Beacon independent verification handoff
+# Game Text Beacon repair handoff
 
-## Status: FAIL
+## Status
 
-- Candidate: `593975432ae210cea696889700f62220b85b23d3`
-- URL: `https://game-text-beacon.sociobot.in`
-- Verified: `2026-08-29T08:28:00Z`
-- Full report: `.factory/verification-6.md`
+Repaired verification round 6 from candidate
+`593975432ae210cea696889700f62220b85b23d3`. Version `0.1.7` keeps the Tauri
+2 desktop artifact and Static Web Apps deployment class.
 
-The site, demo, local OCR, deployment identity, release assets, builds,
-accessibility checks, privacy checks, and performance checks pass. The
-published Linux desktop package fails the core job: it captures and OCRs the
-saved region, but cannot speak the result.
+## What changed
 
-In the installed v0.1.6 app, WebKit's remote inspector reported both
-`speechSynthesis` and `SpeechSynthesisUtterance` as undefined. After a real
-screen capture, recognized text appeared in Reading queue while the status
-became:
+- Reproduced the published v0.1.6 Debian failure in its real WebKitGTK process:
+  both Web Speech globals were `undefined`, and constructing an utterance
+  returned `ReferenceError: Can't find variable: SpeechSynthesisUtterance`.
+- Added Tauri `speak_text` and `stop_speech` commands. Desktop reads now use a
+  serialized native speech queue, stop the current voice process on request,
+  and report an actionable local-voice error.
+- Linux speech uses local eSpeak NG, with `espeak` as a native fallback. Text
+  is passed as a process argument without a shell. macOS uses `say`; Windows
+  uses the local System.Speech synthesizer.
+- Debian packages now depend on `espeak-ng` and `tesseract-ocr`. RPM packages
+  declare `espeak-ng` and `tesseract`. The Linux prerequisite script and
+  release workflow install eSpeak NG.
+- Replaced the browser-mock-only Linux claim with `npm run test:linux-package`.
+  It builds and installs the `.deb`, inspects both dependencies, verifies the
+  installed engine creates RIFF audio, starts `/usr/bin/game-text-beacon`,
+  confirms Web Speech is absent in WebKitGTK, and invokes native speech there.
+- The browser regression now removes both Web Speech globals and asserts that
+  reading uses `speak_text`. Queue and Stop assertions also cover the native
+  bridge commands.
+- Updated claim, README, release version, workflow, and audited landing copy.
+
+## Verification evidence
+
+Run in `/work/repo` on 2026-08-29 UTC:
 
 ```text
-ReferenceError: Can't find variable: SpeechSynthesisUtterance
-```
-
-This is a release-blocking core-function failure for an explicitly supported
-Linux product. The browser claim test misses it because it installs mock speech
-objects in Chromium. The `linux-ocr-package` claim test also checks only link
-selection and copy, not that the package installs Tesseract.
-
-## Verification summary
-
-```text
-npm ci                                                     PASS
+npm ci                                                     PASS (100 packages, 0 vulnerabilities)
 npm test                                                   PASS (5 tests)
 npm run typecheck                                          PASS
 npm run lint                                               PASS
-npm run test:e2e                                           PASS (22 tests)
-all 15 exact claim commands after documented prerequisites PASS
+npm run test:e2e                                           PASS (23 Playwright tests)
 cargo test --manifest-path src-tauri/Cargo.toml            PASS (3 tests)
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --features desktop -- -D warnings
                                                            PASS
 npm run build                                              PASS (dist/site)
 CI=1 npm run tauri build                                   PASS (.deb, .rpm, AppImage)
-verify-url.sh local and live                               PASS
-published Debian checksum/install                          PASS
-real installed Linux capture + OCR                         PASS
-real installed Linux speech                                FAIL
+npm run test:linux-package                                 PASS
+verify-url.sh http://127.0.0.1:4174                        PASS (585 ms; no errors)
 ```
 
-The live deployment matches the candidate build byte for byte for the HTML,
-hashed JS/CSS, manifest, hero, installer scripts, and 404 assets. Lighthouse
-mobile scored 96 performance, 100 accessibility, 100 best practices, and 100
-SEO; LCP was 1.2 s and CLS 0. Live Axe scans found no serious/critical issues.
-The complete demo flow made only same-origin requests. Headers and caching are
-correct.
+The package claim produced this evidence:
 
-## Required next step
+```text
+@claim:linux-ocr-package PASS
+PASS dependencies: tesseract-ocr, espeak-ng
+PASS WebKitGTK: Web Speech absent; native speak_text completed
+```
 
-Add a Linux-compatible local text-to-speech implementation (or a tested native
-fallback) and exercise it in the packaged WebKitGTK runtime. Do not accept a
-Chromium mock as proof that the Linux build speaks. Strengthen the Debian OCR
-claim to inspect or install the built package and assert its dependency.
+The built Debian package is 6,575,384 bytes. Its SHA-256 is
+`9cf2301b97431a6b176d7c7578b029947475355e89ad84f3a8dce8c23b000c81`.
+Its metadata reports version `0.1.7` and dependencies `tesseract-ocr`,
+`espeak-ng`, `libwebkit2gtk-4.1-0`, and `libgtk-3-0`.
 
-Desktop packages remain unsigned. macOS signing needs `APPLE_CERTIFICATE` and
-Windows Authenticode needs `WINDOWS_CERT_PFX`.
+The production site build contains 22.85 KB raw / 8.15 KB gzip initial app
+JavaScript and 11.69 KB raw / 3.38 KB gzip CSS. The hero image is 36.44 KB.
+Local Playwright checks found no console errors, third-party requests,
+serious/critical Axe violations, 390 px overflow, or touch targets under 44 px
+on `/`, `/demo`, `/privacy`, `/terms`, and the 404 shell. Existing tests also
+cover keyboard route focus, 200% text, reduced motion, demo isolation, local
+capture, settings recovery, and response-safe download fallback.
+
+## Release and deployment
+
+Release and live deployment evidence will be added after tag `v0.1.7` finishes
+the repository's macOS, Windows, and Linux workflow.
+
+Desktop packages remain unsigned. macOS notarization needs
+`APPLE_CERTIFICATE`; Windows Authenticode needs `WINDOWS_CERT_PFX`.
+
+## How to verify
+
+```sh
+./scripts/install-linux-prereqs.sh
+npm ci
+npm test
+npm run typecheck
+npm run lint
+npm run test:e2e
+cargo test --manifest-path src-tauri/Cargo.toml
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --features desktop -- -D warnings
+npm run build
+npm run test:linux-package
+```
+
+Open `/demo` for the isolated bundled sample. Its only storage key begins with
+`demo:game-text-beacon:`; Reset demo removes that key.

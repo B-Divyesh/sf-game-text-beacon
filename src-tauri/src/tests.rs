@@ -16,7 +16,9 @@ fn claim_desktop_local_ocr_invokes_local_tesseract_without_a_network_path() {
     let path = directory.join("capture.png");
     let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("icons/32x32.png");
     fs::copy(&fixture, &path).expect("copy local image fixture");
-    let runner = CommandLocalOcr { executable: "tesseract" };
+    let runner = CommandLocalOcr {
+        executable: "tesseract",
+    };
     {
         let capture = TemporaryCapture { path: path.clone() };
         // A tiny icon may contain no text, but this still executes the real
