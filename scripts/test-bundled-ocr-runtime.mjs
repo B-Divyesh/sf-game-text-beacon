@@ -167,7 +167,10 @@ const testMacos = () => {
   try {
     verifyRead(runtimeFrom(mount, 'macos'))
   } finally {
-    run('hdiutil', ['detach', mount])
+    // The payload has been asserted by this point. diskimages-helper can keep
+    // the read-only volume busy briefly, so force-detach without turning that
+    // operating-system cleanup race into a package-test failure.
+    spawnSync('hdiutil', ['detach', '-force', mount], { encoding: 'utf8' })
   }
   console.log(`PASS bundled OCR read from mounted macOS DMG: ${basename(dmgPath)}`)
 }
