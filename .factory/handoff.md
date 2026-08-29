@@ -5,6 +5,7 @@
 The release-blocking packaging failure from independent verification commit
 `474c83cca59d041d5dd54d95fcdadf61fd929728` is repaired in version `0.1.10`.
 The repair preserves the Tauri 2 desktop-app and static-site deployment class.
+The published release source is `4e063f673d54d188c0df8226ed1ddbf1601d2b17`.
 
 ## What changed
 
@@ -29,6 +30,10 @@ The repair preserves the Tauri 2 desktop-app and static-site deployment class.
   publishing release metadata.
 - Ubuntu 22.04's pathless `tesseract --list-langs` output is covered by a
   tested package-layout fallback for `eng.traineddata`.
+- macOS's Homebrew `libwebpmux` declares `libsharpyuv` through `@rpath`.
+  The closure copier now resolves `@rpath` and `@loader_path` dependencies
+  beside their source library; a focused unit regression covers the exact
+  `libwebpmux` → `libsharpyuv` path that failed in an installed DMG.
 - The landing page now accurately says the offered package includes local OCR
   and English data. Linux also says it includes local eSpeak NG speech.
 - Native package payloads are excluded from Vite's frontend watch set. This
@@ -63,7 +68,7 @@ npm run test:compatibility
 Local repair evidence on 2026-08-29 UTC:
 
 - `npm ci`: pass, 100 packages, 0 vulnerabilities.
-- `npm test`: pass, 6 tests. `npm run typecheck`, `npm run lint`, and
+- `npm test`: pass, 7 tests. `npm run typecheck`, `npm run lint`, and
   `npm run build`: pass.
 - `npm run test:e2e`: pass, 25 browser tests, including keyboard, 390 px,
   200% text, route focus, network/privacy, and Playwright Axe scans of every
@@ -96,10 +101,24 @@ used instead and passed the serious/critical scans above.
 
 ## Deployment and release
 
-Push `main` and tag `v0.1.10` to run `.github/workflows/release.yml`. The tag
-build creates the static-site download manifest and release assets for macOS,
-Windows, and Linux. The static deployment remains the configured factory
-deployment for `https://game-text-beacon.sociobot.in`.
+`v0.1.10` is published at
+`https://github.com/B-Divyesh/sf-game-text-beacon/releases/tag/v0.1.10`.
+GitHub Actions run `33260334953` passed its macOS, Windows, Ubuntu, and
+manifest jobs:
+`https://github.com/B-Divyesh/sf-game-text-beacon/actions/runs/33260334953`.
+Each platform job ran the installed-package OCR assertion. The release has the
+DMG, MSI, EXE, Debian, RPM, AppImage, macOS app archive, `SHA256SUMS`, and
+`latest.json`. A post-release consumer check downloaded the Debian package and
+validated it against `SHA256SUMS`; `latest.json` identifies v0.1.10 and all
+seven platform assets.
+
+On 2026-08-29 UTC, `npm run build:site` output in `dist/site` was deployed
+directly to the configured Azure Static Web App `sf-game-text-beacon`
+(`gentle-beach-0b3687310.7.azurestaticapps.net`). The production domain
+`https://game-text-beacon.sociobot.in` then served v0.1.10's manifest. Its
+post-deploy verifier passed HTTPS 200 in 814 ms with no console/page errors,
+the expected title and language, one h1, a main landmark, and no images
+missing alt text.
 
 ## Known gaps and operator action
 
