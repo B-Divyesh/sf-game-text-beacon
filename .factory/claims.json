@@ -50,17 +50,17 @@
   },
   {
     "id": "capture-frame",
-    "claim": "Choose the text region yourself",
+    "claim": "Choose the text region yourself with pointer or keyboard",
     "where": "landing facts and desktop capture frame",
     "test": "npm run test:e2e -- --grep @claim:capture-frame",
-    "sandbox": "mocked local desktop bridge; draw a sample display frame and assert that the desktop UI saves it"
+    "sandbox": "mocked local desktop bridge; pointer and keyboard draw, move, resize, then save a sample display frame"
   },
   {
     "id": "reading-queue",
-    "claim": "Each result joins a queue you can repeat or stop",
+    "claim": "Each result joins the speech queue in capture order; you can repeat or stop",
     "where": "landing steps and desktop reading queue",
     "test": "npm run test:e2e -- --grep @claim:reading-queue",
-    "sandbox": "mocked local capture result; press Read this frame and assert that its text appears in the visible queue"
+    "sandbox": "mocked local speech engine; dispatch two native captures and assert sequential speaks without cancellation"
   },
   {
     "id": "gamepad-read",

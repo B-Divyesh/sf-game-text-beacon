@@ -44,7 +44,7 @@ function shell(content: string, title: string, description: string) {
     <header class="site-head"><a class="wordmark" href="/" data-link><span aria-hidden="true">⌜◉⌟</span> Game Text Beacon</a>
     <nav aria-label="Main navigation"><a href="/demo" data-link>Demo</a><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a></nav></header>
     <div class="route-status" aria-live="polite" aria-atomic="true"></div>${content}
-    <footer><p>Read game text aloud from a chosen region.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.4</p><p class="tiny">Notebook art is original generated product art.</p></footer>`
+    <footer><p>Read game text aloud from a chosen region.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.5</p><p class="tiny">Notebook art is original generated product art.</p></footer>`
   document.querySelectorAll<HTMLAnchorElement>('[data-link]').forEach((link) => link.addEventListener('click', (event) => {
     event.preventDefault(); navigate(link.getAttribute('href') || '/')
   }))
@@ -60,7 +60,7 @@ function landing() {
       <h1>Read game text aloud</h1>
       <p class="lede">For blind and low-vision players when a game only shows text on screen.</p>
       <div class="actions"><button class="primary" id="try-demo">Try it with sample data</button><span>Hear a sample objective right away.</span></div>
-      <ul class="facts"><li>Free to use.</li><li>Made for windowed games.</li><li>Choose the text region yourself.</li></ul></div>
+      <ul class="facts"><li>Free to use.</li><li>Made for windowed games.</li><li>Choose the text region by pointer or keyboard.</li></ul></div>
       <figure><img src="/beacon-notebook.webp" width="1024" height="1024" fetchpriority="high" decoding="async" alt="A notebook inside a blue hand-drawn screen selection frame." /><figcaption>Point the frame at the words you need.</figcaption></figure></section>
     <section class="live-note" aria-labelledby="preview-heading"><div><p class="eyebrow">Preview</p><h2 id="preview-heading">A reading queue, not game automation</h2><p>Beacon reads the selected words. It does not press game controls or change a game.</p></div><div class="sample-slip"><span>Sample objective</span><p>${sampleRead.text}</p><button id="preview-read">Read sample objective</button></div></section>
     <section class="steps" aria-labelledby="how-heading"><h2 id="how-heading">Read a region in three steps</h2><ol><li><strong>Draw a frame.</strong><span>Draw and resize one region over dialogue, a menu, or an objective.</span></li><li><strong>Press your hotkey.</strong><span>Beacon captures that region from a windowed or borderless game.</span></li><li><strong>Hear the result.</strong><span>Each result joins a queue you can repeat or stop.</span></li></ol></section>
@@ -116,7 +116,8 @@ function notFound() {
 
 function status(message: string) { document.querySelector<HTMLElement>('.status')!.textContent = message }
 function speak(text: string, message: string) {
-  speechSynthesis.cancel()
+  // The platform queues successive utterances in FIFO order. Only an explicit
+  // Stop control may cancel what is currently being spoken.
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.rate = 0.92
   speechSynthesis.speak(utterance)
@@ -126,7 +127,7 @@ function speak(text: string, message: string) {
 async function desktop() {
   document.title = 'Game Text Beacon — Read game text aloud'
   app.innerHTML = `<main class="desktop-shell" id="main" tabindex="-1"><header class="app-head"><div><p class="eyebrow">Game Text Beacon</p><h1>Read a saved screen region</h1></div><span class="app-state">Local mode</span></header>
-    <section class="app-grid"><section class="region-panel" aria-labelledby="region-title"><h2 id="region-title">Capture frame</h2><p>Choose capture frame to draw, move, and resize it on a fresh display preview. Beacon only captures this rectangle.</p><div class="frame" aria-label="Saved capture frame preview"><span>Saved game text frame</span><b id="frame-size">Loading saved frame…</b><small id="frame-position"></small></div><button class="primary" id="choose-frame">Choose capture frame</button><button id="read-frame">Read this frame</button><label>Capture hotkey <input id="hotkey" value="Ctrl+Shift+R" aria-describedby="hotkey-help" /></label><p id="hotkey-help" class="tiny">The displayed hotkey registers when Beacon starts and after you save it. A connected controller’s first button also reads the saved frame while Beacon is open.</p><button class="primary" id="save-settings">Save frame and hotkey</button><p id="app-status" class="status" aria-live="polite">Loading saved settings.</p></section>
+    <section class="app-grid"><section class="region-panel" aria-labelledby="region-title"><h2 id="region-title">Capture frame</h2><p>Choose capture frame to draw, move, and resize it on a fresh display preview with a pointer or keyboard. Beacon only captures this rectangle.</p><div class="frame" aria-label="Saved capture frame preview"><span>Saved game text frame</span><b id="frame-size">Loading saved frame…</b><small id="frame-position"></small></div><button class="primary" id="choose-frame">Choose capture frame</button><button id="read-frame">Read this frame</button><label>Capture hotkey <input id="hotkey" value="Ctrl+Shift+R" aria-describedby="hotkey-help" /></label><p id="hotkey-help" class="tiny">The displayed hotkey registers when Beacon starts and after you save it. A connected controller’s first button also reads the saved frame while Beacon is open.</p><button class="primary" id="save-settings">Save frame and hotkey</button><p id="app-status" class="status" aria-live="polite">Loading saved settings.</p></section>
     <section class="queue-panel" aria-labelledby="queue-title"><div class="queue-heading"><h2 id="queue-title">Reading queue</h2><button id="stop-all" class="quiet">Stop reading</button></div><div id="queue" class="queue-empty"><p>No reads yet.</p><span>Your captured text will appear here.</span></div></section></section>
     <section class="app-note"><h2>Before you use Beacon in a game</h2><p>Use windowed or borderless mode. Check the game’s policy and do not use Beacon where capture helpers are forbidden.</p></section></main>`
   let settings = await invokeDesktop('get_settings', {}) as DesktopSettings
@@ -165,11 +166,29 @@ async function desktop() {
   function openFramePicker(preview: DisplayPreview) {
     const dialog = document.createElement('dialog')
     dialog.className = 'frame-picker'
-    dialog.innerHTML = `<form method="dialog" class="picker-head"><strong>Draw your capture frame</strong><button aria-label="Close frame picker">Close</button></form><p>Drag on the current display preview. Drag inside the blue frame to move it. Drag its corner to resize it.</p><div class="picker-stage" id="picker-stage"><img draggable="false" alt="Current primary display preview used to choose a local capture frame." src="data:image/png;base64,${preview.pngBase64}"><div class="selection" id="selection"><i class="resize-handle" aria-hidden="true"></i></div></div><div class="picker-actions"><button id="use-frame" class="primary">Use this capture frame</button><button id="cancel-frame">Cancel</button></div>`
+    dialog.innerHTML = `<form method="dialog" class="picker-head"><strong>Draw your capture frame</strong><button aria-label="Close frame picker">Close</button></form><p id="picker-help">Pointer: drag on the preview to draw, drag the blue frame to move it, or drag its corner to resize it. Keyboard: focus the preview, press D to start a new frame, M to move it, or R to resize it. Arrow keys adjust it by 10 pixels; Shift plus an arrow adjusts it by 50 pixels. You can also enter exact values below.</p><fieldset class="picker-fields"><legend>Capture frame values</legend><label>Left <input id="frame-x" type="number" inputmode="numeric" min="0" max="${preview.width}" step="1"></label><label>Top <input id="frame-y" type="number" inputmode="numeric" min="0" max="${preview.height}" step="1"></label><label>Width <input id="frame-width" type="number" inputmode="numeric" min="20" max="${preview.width}" step="1"></label><label>Height <input id="frame-height" type="number" inputmode="numeric" min="20" max="${preview.height}" step="1"></label></fieldset><div class="picker-stage" id="picker-stage" tabindex="0" role="group" aria-label="Capture frame editor" aria-describedby="picker-help picker-status"><img draggable="false" alt="Current primary display preview used to choose a local capture frame." src="data:image/png;base64,${preview.pngBase64}"><div class="selection" id="selection" aria-hidden="true"><i class="resize-handle"></i></div></div><p id="picker-status" class="status" aria-live="polite" aria-atomic="true"></p><div class="picker-actions"><button id="use-frame" class="primary">Use this capture frame</button><button id="cancel-frame">Cancel</button></div>`
     document.body.append(dialog); dialog.showModal()
     const stage = dialog.querySelector<HTMLElement>('#picker-stage')!
     const selection = dialog.querySelector<HTMLElement>('#selection')!
-    let selected: Region = { ...settings.region }
+    const pickerStatus = dialog.querySelector<HTMLElement>('#picker-status')!
+    const inputs = {
+      x: dialog.querySelector<HTMLInputElement>('#frame-x')!, y: dialog.querySelector<HTMLInputElement>('#frame-y')!,
+      width: dialog.querySelector<HTMLInputElement>('#frame-width')!, height: dialog.querySelector<HTMLInputElement>('#frame-height')!
+    }
+    const minimumWidth = Math.min(20, preview.width)
+    const minimumHeight = Math.min(20, preview.height)
+    const clamp = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value))
+    const normalise = (region: Region): Region => {
+      const x = clamp(region.x, 0, Math.max(0, preview.width - minimumWidth))
+      const y = clamp(region.y, 0, Math.max(0, preview.height - minimumHeight))
+      return {
+        x, y,
+        width: clamp(region.width, minimumWidth, preview.width - x),
+        height: clamp(region.height, minimumHeight, preview.height - y)
+      }
+    }
+    let selected: Region = normalise({ ...settings.region })
+    let keyboardMode: 'move' | 'resize' = 'move'
     const draw = () => {
       const bounds = stage.getBoundingClientRect()
       selection.style.left = `${selected.x / preview.width * bounds.width}px`
@@ -177,6 +196,9 @@ async function desktop() {
       selection.style.width = `${selected.width / preview.width * bounds.width}px`
       selection.style.height = `${selected.height / preview.height * bounds.height}px`
     }
+    const syncInputs = () => Object.entries(inputs).forEach(([key, input]) => { input.value = String(Math.round(selected[key as keyof Region])) })
+    const describe = (action: string) => `${action} Current frame: ${Math.round(selected.x)}, ${Math.round(selected.y)}, ${Math.round(selected.width)} × ${Math.round(selected.height)} pixels.`
+    const refresh = (action: string) => { selected = normalise(selected); draw(); syncInputs(); pickerStatus.textContent = describe(action) }
     const toDisplay = (event: PointerEvent) => {
       const bounds = stage.getBoundingClientRect()
       return { x: Math.max(0, Math.min(preview.width, (event.clientX - bounds.left) / bounds.width * preview.width)), y: Math.max(0, Math.min(preview.height, (event.clientY - bounds.top) / bounds.height * preview.height)) }
@@ -187,7 +209,7 @@ async function desktop() {
       start = toDisplay(event); origin = { ...selected }
       mode = target.classList.contains('resize-handle') ? 'resize' : selection.contains(target) ? 'move' : 'draw'
       if (mode === 'draw') selected = { x: start.x, y: start.y, width: 1, height: 1 }
-      stage.setPointerCapture(event.pointerId); draw(); event.preventDefault()
+      stage.focus({ preventScroll: true }); stage.setPointerCapture(event.pointerId); refresh('Frame pointer editing started.'); event.preventDefault()
     })
     stage.addEventListener('pointermove', (event) => {
       if (!stage.hasPointerCapture(event.pointerId)) return
@@ -195,16 +217,47 @@ async function desktop() {
       if (mode === 'move') { selected.x = Math.max(0, Math.min(preview.width - origin.width, origin.x + point.x - start.x)); selected.y = Math.max(0, Math.min(preview.height - origin.height, origin.y + point.y - start.y)) }
       else if (mode === 'resize') { selected.width = Math.max(20, Math.min(preview.width - selected.x, origin.width + point.x - start.x)); selected.height = Math.max(20, Math.min(preview.height - selected.y, origin.height + point.y - start.y)) }
       else { selected = { x: Math.min(start.x, point.x), y: Math.min(start.y, point.y), width: Math.max(20, Math.abs(point.x - start.x)), height: Math.max(20, Math.abs(point.y - start.y)) }; selected.width = Math.min(selected.width, preview.width - selected.x); selected.height = Math.min(selected.height, preview.height - selected.y) }
-      draw()
+      refresh('Frame changed with pointer.')
     })
     stage.addEventListener('pointerup', (event) => { if (stage.hasPointerCapture(event.pointerId)) stage.releasePointerCapture(event.pointerId) })
+    stage.addEventListener('keydown', (event) => {
+      const key = event.key.toLowerCase()
+      if (key === 'd') {
+        selected = { x: selected.x, y: selected.y, width: Math.min(160, preview.width - selected.x), height: Math.min(100, preview.height - selected.y) }
+        keyboardMode = 'resize'; refresh('New frame started. Arrow keys draw its size; press M to move it.'); event.preventDefault(); return
+      }
+      if (key === 'm') { keyboardMode = 'move'; pickerStatus.textContent = describe('Move mode. Arrow keys move the frame.'); event.preventDefault(); return }
+      if (key === 'r') { keyboardMode = 'resize'; pickerStatus.textContent = describe('Resize mode. Arrow keys change the frame size.'); event.preventDefault(); return }
+      if (!['arrowleft', 'arrowright', 'arrowup', 'arrowdown'].includes(key)) return
+      const amount = event.shiftKey ? 50 : 10
+      if (keyboardMode === 'move') {
+        if (key === 'arrowleft') selected.x -= amount
+        if (key === 'arrowright') selected.x += amount
+        if (key === 'arrowup') selected.y -= amount
+        if (key === 'arrowdown') selected.y += amount
+        refresh('Frame moved with keyboard.')
+      } else {
+        if (key === 'arrowleft') selected.width -= amount
+        if (key === 'arrowright') selected.width += amount
+        if (key === 'arrowup') selected.height -= amount
+        if (key === 'arrowdown') selected.height += amount
+        refresh('Frame resized with keyboard.')
+      }
+      event.preventDefault()
+    })
+    Object.entries(inputs).forEach(([key, input]) => input.addEventListener('input', () => {
+      const value = Number(input.value)
+      if (!Number.isFinite(value)) return
+      selected[key as keyof Region] = value
+      refresh('Frame values changed.')
+    }))
     dialog.querySelector('#cancel-frame')?.addEventListener('click', () => dialog.close())
     dialog.querySelector('#use-frame')?.addEventListener('click', (event) => {
       event.preventDefault(); settings.region = Object.fromEntries(Object.entries(selected).map(([key, value]) => [key, Math.round(value)])) as Region
       dialog.close(); void saveSettings('Capture frame saved and hotkey updated for it.')
     })
     dialog.querySelector('img')?.addEventListener('load', draw)
-    dialog.addEventListener('close', () => dialog.remove()); draw()
+    dialog.addEventListener('close', () => dialog.remove()); refresh('Frame editor ready.')
   }
   async function addRead(text: string) {
     reads = queueRead(reads, { id: crypto.randomUUID(), source: 'Screen region', text, at: new Date().toLocaleTimeString() })

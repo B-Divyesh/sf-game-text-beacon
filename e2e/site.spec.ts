@@ -100,7 +100,7 @@ test('390px mobile layout has no horizontal overflow and keeps navigation, home,
   expect(sizes.every((size) => size.width >= 44 && size.height >= 44)).toBe(true)
 })
 
-test('@claim:capture-frame lets a player draw a frame and persist it through the desktop bridge', async ({ page }) => {
+test('@claim:capture-frame lets a player draw, move, resize, and save a frame with the keyboard or pointer', async ({ page }) => {
   await page.addInitScript(() => {
     const bridge = {
       calls: [] as Array<{ command: string, args: Record<string, unknown> }>,
@@ -120,14 +120,41 @@ test('@claim:capture-frame lets a player draw a frame and persist it through the
   await page.getByRole('button', { name: 'Choose capture frame' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await page.locator('#picker-stage').click({ position: { x: 80, y: 80 } })
+  await page.getByRole('button', { name: 'Cancel' }).click()
+
+  await page.getByRole('button', { name: 'Choose capture frame' }).click()
+  const editor = page.locator('#picker-stage')
+  await expect(page.locator('#picker-help')).toContainText('Keyboard: focus the preview')
+  await expect(editor).toHaveAttribute('aria-describedby', /picker-help picker-status/)
+  await editor.focus()
+  await expect(editor).toBeFocused()
+  await page.keyboard.press('d')
+  await expect(page.locator('#picker-status')).toContainText('New frame started')
+  await page.keyboard.press('m')
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('Shift+ArrowDown')
+  await page.keyboard.press('r')
+  await page.keyboard.press('Shift+ArrowRight')
+  await expect(page.locator('#picker-status')).toContainText('210 × 100')
   await page.getByRole('button', { name: 'Use this capture frame' }).click()
   await expect(page.locator('#app-status')).toContainText('Capture frame saved')
-  const calls = await page.evaluate(() => (window as unknown as { __BEACON_DESKTOP_BRIDGE__: { calls: Array<{ command: string }> } }).__BEACON_DESKTOP_BRIDGE__.calls.map((call) => call.command))
-  expect(calls).toContain('save_settings')
+  const saved = await page.evaluate(() => (window as unknown as { __BEACON_DESKTOP_BRIDGE__: { settings: { region: { x: number, y: number, width: number, height: number } } } }).__BEACON_DESKTOP_BRIDGE__.settings.region)
+  expect(saved).toEqual({ x: 110, y: 150, width: 210, height: 100 })
 })
 
-test('@claim:reading-queue adds only recognized capture text to the visible reading queue', async ({ page }) => {
+test('@claim:reading-queue queues consecutive native captures for speech without cancelling the current utterance', async ({ page }) => {
   await page.addInitScript(() => {
+    const speechOperations: string[] = []
+    class TestUtterance {
+      rate = 1
+      constructor(readonly text: string) {}
+    }
+    Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: TestUtterance })
+    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
+      speak: (utterance: TestUtterance) => speechOperations.push(`speak:${utterance.text}`),
+      cancel: () => speechOperations.push('cancel')
+    } })
+    ;(window as unknown as { __speechOperations__: string[] }).__speechOperations__ = speechOperations
     const bridge = {
       calls: [] as string[],
       async invoke(command: string) {
@@ -140,9 +167,20 @@ test('@claim:reading-queue adds only recognized capture text to the visible read
     ;(window as unknown as { __BEACON_DESKTOP_BRIDGE__: typeof bridge }).__BEACON_DESKTOP_BRIDGE__ = bridge
   })
   await page.goto('/?app')
-  await page.getByRole('button', { name: 'Read this frame' }).click()
-  await expect(page.locator('#queue')).toContainText('Find the weathered radio tower.')
+  await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('beacon-read', { detail: { text: 'First capture.' } }))
+    window.dispatchEvent(new CustomEvent('beacon-read', { detail: { text: 'Second capture.' } }))
+  })
+  await expect(page.locator('#queue')).toContainText('First capture.')
+  await expect(page.locator('#queue')).toContainText('Second capture.')
   await expect(page.locator('#app-status')).toContainText('Text added to the reading queue.')
+  expect(await page.evaluate(() => (window as unknown as { __speechOperations__: string[] }).__speechOperations__)).toEqual([
+    'speak:First capture.', 'speak:Second capture.'
+  ])
+  await page.getByRole('button', { name: 'Stop reading' }).click()
+  expect(await page.evaluate(() => (window as unknown as { __speechOperations__: string[] }).__speechOperations__)).toEqual([
+    'speak:First capture.', 'speak:Second capture.', 'cancel'
+  ])
 })
 
 test('@claim:gamepad-read reads the saved frame exactly once for one controller-button press', async ({ page }) => {
