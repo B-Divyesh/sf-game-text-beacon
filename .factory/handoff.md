@@ -58,15 +58,25 @@ The static production build is 18.66 KB raw / 6.87 KB gzip JavaScript and
 
 ## Deployment and known limits
 
-Deployed commit `37a5b71ce799dc5e28e51cc54ca567970575100c` with the configured
-static work-order helper to the existing Static Web App (deployment
-`18e55f1f-6458-4363-8ad3-4c7ed19840fe`). Live
-`https://game-text-beacon.sociobot.in` passed `verify-url.sh` with no console
-errors, a title, `lang=en`, one h1, a main landmark, and complete image alt
-text. The live `/missing-note` response is HTTP 404, byte-for-byte matches
-`dist/site/404.html`, sends the intended `style-src 'self'` CSP, loads
-`/404.css`, has the shared header/main/footer at 390 px with no overflow, and
-has no CSP or inline-style console violation. (Chromium reports the expected
-resource-status message for navigating to a 404 document itself.) Packages remain intentionally unsigned. macOS notarization requires
-`APPLE_CERTIFICATE`; Windows Authenticode requires `WINDOWS_CERT_PFX`. No
-updater or telemetry is shipped.
+Commit `37a5b71ce799dc5e28e51cc54ca567970575100c` was pushed to `main` and
+deployed with the configured static work-order helper. Static Web App deployment
+`b3b6914c-5870-4080-8505-02fd1d2ca460` completed successfully at
+`https://game-text-beacon.sociobot.in`.
+
+`verify-url.sh` passed against the live home page: 200, title, `lang=en`, one
+`h1`, main landmark, image alt text, and no console errors. A live Playwright
+check found no console errors, third-party requests, or Axe serious/critical
+findings on `/` and `/demo`; at 390 px it found no horizontal overflow or
+interactive target smaller than 44 px. Keyboard verification confirmed the
+skip link is first, moves focus to main, and route navigation focuses the new
+heading. The live missing route returns HTTP 404, uses `/404.css`, contains no
+inline `<style>`, and has the shared header/main/footer; it has no CSP violation
+(Chromium reports the expected failed-resource notice for a document whose HTTP
+status is 404). Local and live `index.html` SHA-256 values match, as do local
+and live `404.html` SHA-256 values.
+
+This product has no service worker, updater, server API, sign-in, payment, or
+consumer package; offline/update, rate-limit, identity-provider, and consumer
+package checks do not apply. Packages remain intentionally unsigned. macOS
+notarization requires `APPLE_CERTIFICATE`; Windows Authenticode requires
+`WINDOWS_CERT_PFX`. No updater or telemetry is shipped.
