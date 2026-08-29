@@ -326,10 +326,10 @@ fn capture_preview(app: AppHandle) -> Result<DisplayPreview, String> {
 }
 
 #[cfg(feature = "desktop")]
-fn bundled_speech_runtime(app: &AppHandle) -> Result<Option<(PathBuf, PathBuf)>, String> {
+fn bundled_speech_runtime(_app: &AppHandle) -> Result<Option<(PathBuf, PathBuf)>, String> {
     #[cfg(target_os = "linux")]
     {
-        if let Some(runtime) = app_bundled_ocr_runtime(app) {
+        if let Some(runtime) = app_bundled_ocr_runtime(_app) {
             let executable = runtime
                 .executable
                 .parent()

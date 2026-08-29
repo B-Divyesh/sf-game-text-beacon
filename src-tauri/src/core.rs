@@ -174,7 +174,7 @@ pub fn spawn_local_speech(text: &str) -> Result<Child, String> {
 pub fn spawn_bundled_linux_speech(
     text: &str,
     executable: &Path,
-    library_dir: &Path,
+    _library_dir: &Path,
 ) -> Result<Child, String> {
     if text.trim().is_empty() {
         return Err("There is no text to read aloud.".into());
@@ -188,7 +188,7 @@ pub fn spawn_bundled_linux_speech(
         .args(["-s", "160", "--"])
         .arg(text);
     #[cfg(target_os = "linux")]
-    command.env("LD_LIBRARY_PATH", library_dir);
+    command.env("LD_LIBRARY_PATH", _library_dir);
     command.spawn().map_err(|error| {
         format!(
             "The bundled local voice could not start. Reinstall the desktop package, then try again: {error}"

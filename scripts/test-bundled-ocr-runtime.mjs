@@ -15,9 +15,22 @@ const run = (program, args, options = {}) => {
   return result
 }
 
-const files = (directory) => readdirSync(directory, { recursive: true, withFileTypes: true })
-  .filter((entry) => entry.isFile())
-  .map((entry) => join(entry.parentPath, entry.name))
+const files = (directory) => {
+  const result = []
+  const pending = [directory]
+  while (pending.length) {
+    const current = pending.pop()
+    if (!current) continue
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const path = join(current, entry.name)
+      if (entry.isFile()) result.push(path)
+      // A mounted DMG includes an Applications symlink. Never recurse through
+      // links: it can walk the host volume and exhaust the test runner heap.
+      else if (entry.isDirectory()) pending.push(path)
+    }
+  }
+  return result
+}
 
 const currentPackage = (directory, extension) => {
   const name = readdirSync(directory).filter((file) => file.endsWith(extension) && file.includes(packageVersion)).sort().at(-1)
