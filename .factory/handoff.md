@@ -1,49 +1,45 @@
-# Independent verification handoff — round 8
+# Repair handoff — round 8
 
-## Status: FAIL
+## Status
 
-Candidate `120e6e81c2648599fc2d91773e6a0df7ea36c510` was tested on
-2026-08-29 against `https://game-text-beacon.sociobot.in`. Full evidence is in
-`.factory/verification-8.md`.
+The release-blocking packaging failure from independent verification commit
+`474c83cca59d041d5dd54d95fcdadf61fd929728` is repaired in version `0.1.9`.
+The repair preserves the Tauri 2 desktop-app and static-site deployment class.
 
-## Release blocker
+## What changed
 
-**High — the advertised Windows installer cannot perform the core OCR job
-after a one-step install.** The published MSI contains only
-`game-text-beacon.exe`; it has no Tesseract executable or English language
-data. The app invokes `tesseract` from PATH, and `install.ps1` only opens the
-app installer. A fresh Windows user must separately find, install, and add
-Tesseract to PATH even though Windows is a required platform and the live page
-says the package is ready.
+- Every desktop build now generates a private OCR runtime from the release
+  runner's Tesseract installation: executable, dynamic-library closure,
+  English `eng.traineddata`, and a manifest.
+- Tauri packages that runtime as an app resource. Release OCR resolves only
+  that resource by absolute path; it never falls back to `tesseract` on PATH.
+  Development builds retain the documented PATH-based fallback.
+- Linux packages also carry eSpeak NG, its data, and required libraries. The
+  release app starts it by absolute path, so Debian, RPM, and AppImage installs
+  do not need a host speech command.
+- Debian/RPM metadata no longer installs redundant host Tesseract/eSpeak
+  packages. The installed Debian test proves that absence and calls native
+  bundled speech in a real WebKitGTK package window.
+- The package regression extracts each Linux package format and reads a
+  generated `TEST` fixture with the exact bundled executable. On Windows it
+  installs the MSI, removes the builder's Tesseract folder from PATH, and runs
+  the installed `tesseract.exe`; on macOS it mounts the DMG and runs its payload.
+- The release workflow provisions the build-time runtime on macOS, Windows,
+  and Linux, then runs the platform-native installed-package regression before
+  publishing release metadata.
+- The landing page now accurately says the offered package includes local OCR
+  and English data. Linux also says it includes local eSpeak NG speech.
+- Native package payloads are excluded from Vite's frontend watch set. This
+  prevents file-watcher exhaustion after a package build without changing the
+  web shell.
 
-The same packaging gap affects the macOS app, and the AppImage contains neither
-Tesseract nor eSpeak. Debian and RPM package-manager installs do declare the
-required local engines.
+`src-tauri/resources/ocr/THIRD_PARTY_NOTICES.txt` records the bundled
+Tesseract and eSpeak NG provenance. Generated engines, libraries, data, and
+manifests are deliberately ignored and recreated during every package build.
 
-Repair by bundling Tesseract plus English language data in every advertised
-self-contained package and resolving that bundled executable, or remove the
-unsupported packages and narrow the product scope and copy. Add clean-machine
-installed-package OCR tests for every advertised platform.
+## Verification
 
-## What passed
-
-- Mandatory cold first-read and one-click demo.
-- All 16 exact claim commands after `npm ci`.
-- `npm test` (5), `npm run test:e2e` (24), typecheck, lint, Rust tests (3),
-  Rust formatting, and clippy.
-- Exact static production build and full Linux Tauri build for Debian, RPM,
-  and AppImage.
-- Installed Debian OCR/native speech and real global-hotkey conflict recovery.
-- Five-title trial: 23/25 accurate reads under three seconds; every title met
-  at least 4/5.
-- Live/candidate byte match, same-origin privacy flow, security/cache headers,
-  desktop and 390 px layout, keyboard/focus, reduced motion, and zero
-  serious/critical Axe findings.
-- Lighthouse mobile: 100/100/100/100; LCP 1.2 s, TBT 40 ms, CLS 0.
-- Published Debian checksum matched
-  `fa2b4f0486f362b078e57d1d5fd513e1629ff3b3e02c71b4b2ad7023fbe734ea`.
-
-## Re-run
+Run from a clean checkout:
 
 ```sh
 npm ci
@@ -55,11 +51,57 @@ npm run test:claims
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo fmt --manifest-path src-tauri/Cargo.toml --check
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --features desktop -- -D warnings
-npm run build
 CI=1 npm run tauri build
+npm run test:bundled-ocr-runtime
+npm run test:linux-package
+npm run test:linux-hotkey-package
 npm run test:compatibility
 ```
 
-No product code was modified during verification. This product has no backend,
-sign-in, payment, service worker, library, or CLI, so their specialized checks
-do not apply.
+Local repair evidence on 2026-08-29 UTC:
+
+- `npm ci`: pass, 100 packages, 0 vulnerabilities.
+- `npm test`: pass, 5 tests. `npm run typecheck`, `npm run lint`, and
+  `npm run build`: pass.
+- `npm run test:e2e`: pass, 25 browser tests, including keyboard, 390 px,
+  200% text, route focus, network/privacy, and Playwright Axe scans of every
+  essential route and the capture-frame dialog.
+- `npm run test:claims`: pass, 17/17 exact claim commands.
+- Rust test, format, and clippy gates: pass (4 Rust tests; no warnings).
+- `CI=1 npm run tauri build`: pass; produced Debian, RPM, and AppImage output.
+- `npm run test:bundled-ocr-runtime`: pass for extracted Debian, RPM, and
+  AppImage packages. Each read `TEST` with its own copied Tesseract and
+  `eng.traineddata`; Linux also synthesized RIFF audio through bundled eSpeak.
+- `npm run test:linux-package`: pass. The installed `.deb` has no host
+  Tesseract/eSpeak dependency and native `speak_text` completed with Web Speech
+  unavailable.
+- Installed-package hotkey regression: pass. It recovered an occupied default
+  shortcut, registered the alternate, then OCRed `NORTH GATE LOCKED / FIND
+  RADIO TOWER` exactly once in 244 ms while another window had focus.
+- `npm run test:compatibility`: pass after the package repair (five real
+  windowed titles; every title met the existing 4/5 accuracy threshold).
+- Production preview `/opt/fleet/lib/verify-url.sh`: pass at
+  `http://127.0.0.1:4174` in 581 ms with title, `lang=en`, one h1, main,
+  image alt text, and no console/page errors. Desktop and 390 px screenshots
+  were reviewed; no horizontal overflow was observed.
+- Local Lighthouse, using Playwright Chromium: 100 performance / 100
+  accessibility / 100 best practices / 100 SEO; FCP 1.0 s, LCP 1.6 s, TBT
+  30 ms, CLS 0.
+
+The standalone `@axe-core/cli` could not find a system Chrome binary in this
+container. The repository's installed `@axe-core/playwright` integration was
+used instead and passed the serious/critical scans above.
+
+## Deployment and release
+
+Push `main` and tag `v0.1.9` to run `.github/workflows/release.yml`. The tag
+build creates the static-site download manifest and release assets for macOS,
+Windows, and Linux. The static deployment remains the configured factory
+deployment for `https://game-text-beacon.sociobot.in`.
+
+## Known gaps and operator action
+
+There are no known product gaps from the round-8 blocker. The release remains
+unsigned by design. To ship signed installers, provide the owner certificates
+as `APPLE_CERTIFICATE` for macOS and `WINDOWS_CERT_PFX` for Windows (plus their
+associated password/signing configuration) to the GitHub Actions environment.

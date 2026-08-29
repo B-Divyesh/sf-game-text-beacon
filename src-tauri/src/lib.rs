@@ -9,8 +9,9 @@ mod tests;
 
 #[cfg(feature = "desktop")]
 use crate::core::{
-    bounded_region, read_with_local_runner, spawn_local_speech, CommandLocalOcr, Region, Settings,
-    SettingsStore, TemporaryCapture,
+    bounded_region, bundled_ocr_runtime, development_ocr_runner, platform_runtime_name,
+    read_with_local_runner, spawn_bundled_linux_speech, spawn_local_speech, BundledOcrRuntime,
+    Region, Settings, SettingsStore, TemporaryCapture,
 };
 #[cfg(feature = "desktop")]
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
@@ -98,17 +99,57 @@ fn primary_display() -> Result<xcap::Monitor, String> {
 }
 
 #[cfg(feature = "desktop")]
-fn local_ocr(capture: &TemporaryCapture) -> Result<String, String> {
-    read_with_local_runner(
-        &CommandLocalOcr {
-            executable: "tesseract",
-        },
-        capture,
-    )
+fn app_bundled_ocr_runtime(app: &AppHandle) -> Option<BundledOcrRuntime> {
+    let resource_dir = app.path().resource_dir().ok();
+    let mut roots = resource_dir.clone().into_iter().collect::<Vec<_>>();
+    if let Some(product_name) = app.config().product_name.as_ref() {
+        if let Some(library_directory) = resource_dir.as_ref().and_then(|path| path.parent()) {
+            roots.push(library_directory.join(product_name));
+        }
+        if let Ok(executable) = std::env::current_exe() {
+            if let Some(usr_directory) =
+                executable.parent().and_then(|directory| directory.parent())
+            {
+                roots.push(usr_directory.join("lib").join(product_name));
+            }
+        }
+        // Debian installs Tauri resources below /usr/lib/<Product Name>.
+        // Ask the packaged location directly as well: resource_dir differs
+        // across tauri-bundler versions and can be unavailable in a sandboxed
+        // installed process.
+        #[cfg(target_os = "linux")]
+        roots.push(PathBuf::from("/usr/lib").join(product_name));
+    }
+    // Tauri's resource directory is the `resources` folder on Windows and
+    // macOS, while Linux package layouts may expose the app library directory
+    // above it. The package-name path can also differ from the display product
+    // name on Linux, so check the concrete bundled product directory too.
+    // No release build ever falls back to a system OCR executable.
+    roots
+        .into_iter()
+        .flat_map(|directory| [directory.clone(), directory.join("resources")])
+        .map(|directory| bundled_ocr_runtime(&directory, platform_runtime_name()))
+        .find(BundledOcrRuntime::is_complete)
 }
 
 #[cfg(feature = "desktop")]
-fn capture_and_ocr(region: Region) -> Result<String, String> {
+fn local_ocr(app: &AppHandle, capture: &TemporaryCapture) -> Result<String, String> {
+    if let Some(bundled) = app_bundled_ocr_runtime(app) {
+        return read_with_local_runner(&bundled.into_runner(), capture);
+    }
+
+    // A dev build is intentionally allowed to use the developer's Tesseract
+    // installation. This branch is compiled out of release builds so every
+    // downloaded app uses its own OCR payload and language data.
+    if cfg!(debug_assertions) {
+        return read_with_local_runner(&development_ocr_runner(), capture);
+    }
+
+    Err("Beacon's bundled OCR engine is incomplete. Reinstall the desktop package, then press the hotkey again.".into())
+}
+
+#[cfg(feature = "desktop")]
+fn capture_and_ocr(app: &AppHandle, region: Region) -> Result<String, String> {
     let image = primary_display()?.capture_image().map_err(|e| {
         format!("Could not capture the display. Use windowed or borderless mode: {e}")
     })?;
@@ -123,7 +164,7 @@ fn capture_and_ocr(region: Region) -> Result<String, String> {
     };
     crop.save(&capture.path)
         .map_err(|e| format!("Could not prepare the local capture: {e}"))?;
-    local_ocr(&capture)
+    local_ocr(app, &capture)
 }
 
 #[cfg(feature = "desktop")]
@@ -165,7 +206,7 @@ fn register_hotkey(app: &AppHandle, hotkey: &str) -> Result<(), String> {
             let region = state.0.lock().map(|settings| settings.region.clone());
             match region
                 .map_err(|_| "Could not read the saved capture frame.".to_string())
-                .and_then(capture_and_ocr)
+                .and_then(|region| capture_and_ocr(app, region))
             {
                 Ok(text) => {
                     let _ = app.emit("beacon-read", serde_json::json!({ "text": text }));
@@ -248,8 +289,8 @@ fn save_settings(
 
 #[cfg(feature = "desktop")]
 #[tauri::command]
-fn capture_region(region: Region) -> Result<String, String> {
-    capture_and_ocr(region)
+fn capture_region(app: AppHandle, region: Region) -> Result<String, String> {
+    capture_and_ocr(&app, region)
 }
 
 #[cfg(feature = "desktop")]
@@ -285,12 +326,42 @@ fn capture_preview(app: AppHandle) -> Result<DisplayPreview, String> {
 }
 
 #[cfg(feature = "desktop")]
-fn run_local_speech(state: SpeechState, text: String) -> Result<(), String> {
+fn bundled_speech_runtime(app: &AppHandle) -> Result<Option<(PathBuf, PathBuf)>, String> {
+    #[cfg(target_os = "linux")]
+    {
+        if let Some(runtime) = app_bundled_ocr_runtime(app) {
+            let executable = runtime
+                .executable
+                .parent()
+                .unwrap_or(&runtime.executable)
+                .join("speech/espeak-ng");
+            if executable.is_file() {
+                return Ok(Some((executable, runtime.library_dir)));
+            }
+        }
+        if !cfg!(debug_assertions) {
+            return Err("Beacon's bundled local voice is incomplete. Reinstall the desktop package, then try again.".into());
+        }
+    }
+    Ok(None)
+}
+
+#[cfg(feature = "desktop")]
+fn run_local_speech(
+    state: SpeechState,
+    text: String,
+    bundled_speech: Option<(PathBuf, PathBuf)>,
+) -> Result<(), String> {
     let _turn = state
         .serial
         .lock()
         .map_err(|_| "The local speech queue is unavailable.".to_string())?;
-    let child = spawn_local_speech(&text)?;
+    let child = match bundled_speech {
+        Some((executable, library_dir)) => {
+            spawn_bundled_linux_speech(&text, &executable, &library_dir)?
+        }
+        None => spawn_local_speech(&text)?,
+    };
     *state
         .current
         .lock()
@@ -327,9 +398,14 @@ fn run_local_speech(state: SpeechState, text: String) -> Result<(), String> {
 
 #[cfg(feature = "desktop")]
 #[tauri::command]
-async fn speak_text(text: String, state: State<'_, SpeechState>) -> Result<(), String> {
+async fn speak_text(
+    app: AppHandle,
+    text: String,
+    state: State<'_, SpeechState>,
+) -> Result<(), String> {
     let state = state.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || run_local_speech(state, text))
+    let bundled_speech = bundled_speech_runtime(&app)?;
+    tauri::async_runtime::spawn_blocking(move || run_local_speech(state, text, bundled_speech))
         .await
         .map_err(|error| format!("The local voice task ended unexpectedly: {error}"))?
 }

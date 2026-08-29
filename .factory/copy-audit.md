@@ -22,7 +22,8 @@
 | Beacon loads your saved frame and checks the default hotkey. | 10 | pass |
 | Draw, move, or resize the frame on a fresh display preview. | 11 | pass |
 | Press the hotkey to add local OCR text to the queue. | 11 | pass |
-| It installs local Tesseract OCR and eSpeak NG speech too. | 10 | pass |
+| It includes local Tesseract OCR, English data, and eSpeak NG speech. | 11 | pass |
+| It includes local Tesseract OCR and English data. | 8 | pass |
 | It does not automate play or send screenshots to a cloud service. | 11 | pass |
 | Use it with windowed or borderless games. | 7 | pass |
 | Check each game’s policy before using a capture helper. | 10 | pass |

@@ -46,7 +46,14 @@
     "claim": "The desktop capture uses local OCR and no cloud OCR endpoint",
     "where": "privacy page and README",
     "test": "npm run test:desktop-local-ocr",
-    "sandbox": "native command runner invokes installed local Tesseract on a private capture fixture and contains no HTTP endpoint"
+    "sandbox": "native command runner invokes local Tesseract on a private capture fixture and contains no HTTP endpoint"
+  },
+  {
+    "id": "bundled-ocr-runtime",
+    "claim": "Every advertised desktop package includes local Tesseract OCR and English data",
+    "where": "desktop download status and README",
+    "test": "npm run test:bundled-ocr-runtime",
+    "sandbox": "fresh current-platform package; extract or install it, invoke its bundled Tesseract directly on a shipped generated fixture, and assert TEST is read without PATH"
   },
   {
     "id": "free-no-account",
@@ -99,10 +106,10 @@
   },
   {
     "id": "linux-ocr-package",
-    "claim": "The Linux download installs local Tesseract OCR and eSpeak NG speech",
+    "claim": "The Linux download includes local Tesseract OCR and eSpeak NG speech",
     "where": "desktop download status and README",
     "test": "npm run test:linux-package",
-    "sandbox": "build and install the Debian package; inspect its metadata for Tesseract and eSpeak NG dependencies; invoke native speech from its real WebKitGTK window"
+    "sandbox": "build and install the Debian package; assert it has no host OCR or speech dependency; read a fixture through its bundled Tesseract and English data; invoke bundled native speech from its real WebKitGTK window"
   },
   {
     "id": "packaged-global-hotkey",

@@ -45,7 +45,7 @@ function shell(content: string, title: string, description: string) {
     <header class="site-head"><a class="wordmark" href="/" data-link><span aria-hidden="true">⌜◉⌟</span> Game Text Beacon</a>
     <nav aria-label="Main navigation"><a href="/demo" data-link>Demo</a><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a></nav></header>
     <div class="route-status" aria-live="polite" aria-atomic="true"></div>${content}
-    <footer><p>Read game text aloud from a chosen region.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.8</p><p class="tiny">Notebook art is original generated product art.</p></footer>`
+    <footer><p>Read game text aloud from a chosen region.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.9</p><p class="tiny">Notebook art is original generated product art.</p></footer>`
   document.querySelectorAll<HTMLAnchorElement>('[data-link]').forEach((link) => link.addEventListener('click', (event) => {
     event.preventDefault(); navigate(link.getAttribute('href') || '/')
   }))
@@ -83,12 +83,13 @@ async function loadDownloads() {
     const release = await response.json() as { assets?: Record<string, string> }
     const assets = Object.entries(release.assets || {})
     const agent = navigator.userAgent.toLowerCase()
-    // Debian packages declare Tesseract as a dependency. Prefer that one so a
-    // Linux download can complete the actual local OCR job after install.
+    // Linux still prefers Debian because it also declares the local speech
+    // dependency. Every advertised package carries its own OCR engine and
+    // English language data.
     const extensions = agent.includes('win') ? ['.msi', '.exe'] : agent.includes('mac') ? ['.dmg'] : ['.deb']
     const asset = assets.find(([name]) => extensions.some((extension) => name.toLowerCase().endsWith(extension)))
     if (!asset) return
-    statusNode.textContent = agent.includes('linux') ? `A package for this computer is ready: ${asset[0]}. It installs local Tesseract OCR and eSpeak NG speech too.` : `A package for this computer is ready: ${asset[0]}.`
+    statusNode.textContent = agent.includes('linux') ? `A package for this computer is ready: ${asset[0]}. It includes local Tesseract OCR, English data, and eSpeak NG speech.` : `A package for this computer is ready: ${asset[0]}. It includes local Tesseract OCR and English data.`
     link.href = asset[1]; link.hidden = false
   } catch {
     // The calm, usable fallback above is intentional for an offline landing page.

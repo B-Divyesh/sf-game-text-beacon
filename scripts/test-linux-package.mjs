@@ -20,8 +20,7 @@ const inspect = spawnSync('dpkg-deb', ['-f', packagePath, 'Package', 'Version', 
 assert.equal(inspect.status, 0, inspect.stderr)
 assert.match(inspect.stdout, /Package: game-text-beacon/)
 assert.match(inspect.stdout, new RegExp(`Version: ${expectedVersion.replaceAll('.', '\\.')}`))
-assert.match(inspect.stdout, /Depends:.*tesseract-ocr/)
-assert.match(inspect.stdout, /Depends:.*espeak-ng/)
+assert.doesNotMatch(inspect.stdout, /tesseract-ocr|espeak-ng/, 'The downloaded package must use its bundled OCR and speech runtime, not install host engines.')
 
 const privilege = process.getuid?.() === 0 ? [] : ['sudo']
 const installer = privilege.length ? privilege[0] : 'apt-get'
@@ -30,19 +29,6 @@ const installArguments = privilege.length
   : ['install', '-y', '--reinstall', packagePath]
 const install = spawnSync(installer, installArguments, { encoding: 'utf8' })
 assert.equal(install.status, 0, `${install.stdout}\n${install.stderr}`)
-
-for (const dependency of ['tesseract-ocr', 'espeak-ng']) {
-  const installed = spawnSync('dpkg-query', ['-W', '-f=${Status}', dependency], { encoding: 'utf8' })
-  assert.equal(installed.status, 0, `${dependency} was not installed by the Debian dependency resolver`)
-  assert.match(installed.stdout, /install ok installed/)
-}
-
-// Prove that the package-installed speech engine can synthesize PCM locally,
-// even though the verifier container has no physical speaker.
-const wav = spawnSync('espeak-ng', ['--stdout', 'Game Text Beacon native package speech check.'])
-assert.equal(wav.status, 0, wav.stderr?.toString())
-assert.equal(wav.stdout.subarray(0, 4).toString('ascii'), 'RIFF')
-assert(wav.stdout.length > 1000, 'eSpeak NG did not generate audible wave data')
 
 const scratch = mkdtempSync(join(tmpdir(), 'game-text-beacon-package-'))
 const alsaConfig = join(scratch, 'asound.conf')
@@ -106,7 +92,7 @@ try {
   assert.equal(nativeResult, 'ok', `Native speech failed in the installed WebKitGTK package: ${nativeResult}\n${applicationLog}`)
   console.log('@claim:linux-ocr-package PASS')
   console.log(`PASS installed package: ${packagePath}`)
-  console.log('PASS dependencies: tesseract-ocr, espeak-ng')
+  console.log('PASS dependency metadata: no host Tesseract or eSpeak NG requirement')
   console.log('PASS WebKitGTK: Web Speech absent; native speak_text completed')
 } finally {
   await browser?.close()

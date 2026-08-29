@@ -1,6 +1,9 @@
 node_modules/
 dist/
 src-tauri/target/
+src-tauri/resources/ocr/*
+!src-tauri/resources/ocr/.gitkeep
+!src-tauri/resources/ocr/THIRD_PARTY_NOTICES.txt
 test-results/
 playwright-report/
 .env

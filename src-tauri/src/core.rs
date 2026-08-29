@@ -50,11 +50,73 @@ pub trait LocalOcrRunner {
     fn read(&self, image_path: &Path) -> Result<String, String>;
 }
 
-/// The desktop shell invokes the Tesseract executable installed with the app's
-/// Linux package. This runner is deliberately process-only: it has no HTTP
-/// client, endpoint, or upload path.
+/// The desktop shell invokes the Tesseract runtime that ships inside the app.
+/// This runner is deliberately process-only: it has no HTTP client, endpoint,
+/// or upload path.
 pub struct CommandLocalOcr {
-    pub executable: &'static str,
+    pub executable: PathBuf,
+    pub tessdata_dir: Option<PathBuf>,
+    pub library_dir: Option<PathBuf>,
+}
+
+/// Exact layout copied by `scripts/prepare-ocr-runtime.mjs` and Tauri's
+/// `bundle.resources` mapping. Keeping the layout in one pure function lets
+/// the app and installed-package checks prove the same contract.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BundledOcrRuntime {
+    pub executable: PathBuf,
+    pub tessdata_dir: PathBuf,
+    pub library_dir: PathBuf,
+}
+
+pub fn bundled_ocr_runtime(resource_dir: &Path, platform: &str) -> BundledOcrRuntime {
+    let runtime = resource_dir.join("ocr").join(platform);
+    let executable = if platform == "windows" {
+        runtime.join("tesseract.exe")
+    } else {
+        runtime.join("tesseract")
+    };
+    BundledOcrRuntime {
+        executable,
+        tessdata_dir: runtime.join("tessdata"),
+        library_dir: runtime.join("lib"),
+    }
+}
+
+pub fn platform_runtime_name() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "windows"
+    } else if cfg!(target_os = "macos") {
+        "macos"
+    } else {
+        "linux"
+    }
+}
+
+impl BundledOcrRuntime {
+    pub fn into_runner(self) -> CommandLocalOcr {
+        CommandLocalOcr {
+            executable: self.executable,
+            tessdata_dir: Some(self.tessdata_dir),
+            library_dir: Some(self.library_dir),
+        }
+    }
+
+    pub fn is_complete(&self) -> bool {
+        self.executable.is_file() && self.tessdata_dir.join("eng.traineddata").is_file()
+    }
+}
+
+/// Development runs do not have a bundle resource directory. They may use the
+/// developer's locally installed Tesseract, but release builds never do: a
+/// missing bundled engine is an actionable packaging failure rather than a
+/// surprise PATH dependency for a player.
+pub fn development_ocr_runner() -> CommandLocalOcr {
+    CommandLocalOcr {
+        executable: PathBuf::from("tesseract"),
+        tessdata_dir: None,
+        library_dir: None,
+    }
 }
 
 /// Starts speech with the operating system's local voice command. Linux
@@ -106,15 +168,62 @@ pub fn spawn_local_speech(text: &str) -> Result<Child, String> {
     ))
 }
 
+/// Linux AppImage installs have no package manager to provide a voice engine.
+/// The release build therefore places eSpeak NG alongside the bundled OCR
+/// runtime and starts it by absolute path with its private library directory.
+pub fn spawn_bundled_linux_speech(
+    text: &str,
+    executable: &Path,
+    library_dir: &Path,
+) -> Result<Child, String> {
+    if text.trim().is_empty() {
+        return Err("There is no text to read aloud.".into());
+    }
+    let mut command = Command::new(executable);
+    let data_root = executable.parent().ok_or({
+        "The bundled local voice has no data folder. Reinstall the desktop package, then try again."
+    })?;
+    command
+        .arg(format!("--path={}", data_root.display()))
+        .args(["-s", "160", "--"])
+        .arg(text);
+    #[cfg(target_os = "linux")]
+    command.env("LD_LIBRARY_PATH", library_dir);
+    command.spawn().map_err(|error| {
+        format!(
+            "The bundled local voice could not start. Reinstall the desktop package, then try again: {error}"
+        )
+    })
+}
+
 impl LocalOcrRunner for CommandLocalOcr {
     fn read(&self, image_path: &Path) -> Result<String, String> {
-        let output = Command::new(self.executable)
-            .arg(image_path)
-            .arg("stdout")
-            .arg("--psm")
-            .arg("6")
+        let mut command = Command::new(&self.executable);
+        command.arg(image_path).arg("stdout").arg("--psm").arg("6");
+        if let Some(tessdata_dir) = &self.tessdata_dir {
+            command.env("TESSDATA_PREFIX", tessdata_dir);
+        }
+        if let Some(library_dir) = &self.library_dir {
+            if library_dir.is_dir() {
+                #[cfg(target_os = "windows")]
+                {
+                    let existing = std::env::var_os("PATH").unwrap_or_default();
+                    let paths = std::env::join_paths(
+                        std::iter::once(library_dir.to_path_buf())
+                            .chain(std::env::split_paths(&existing)),
+                    )
+                    .map_err(|error| format!("Could not start the bundled OCR engine: {error}"))?;
+                    command.env("PATH", paths);
+                }
+                #[cfg(target_os = "macos")]
+                command.env("DYLD_LIBRARY_PATH", library_dir);
+                #[cfg(target_os = "linux")]
+                command.env("LD_LIBRARY_PATH", library_dir);
+            }
+        }
+        let output = command
             .output()
-            .map_err(|_| "Beacon needs the local Tesseract OCR engine. Install the packaged OCR dependency, then press the hotkey again.".to_string())?;
+            .map_err(|_| "Beacon could not start its bundled local Tesseract OCR engine. Reinstall the desktop package, then press the hotkey again.".to_string())?;
         if !output.status.success() {
             return Err(
                 "Tesseract could not read this region. Try a tighter frame with larger text."

@@ -6,6 +6,8 @@ set -eu
 
 if command -v tesseract >/dev/null 2>&1 &&
   command -v espeak-ng >/dev/null 2>&1 &&
+  command -v rpm2cpio >/dev/null 2>&1 &&
+  command -v cpio >/dev/null 2>&1 &&
   command -v Xvfb >/dev/null 2>&1 &&
   command -v xdotool >/dev/null 2>&1 &&
   pkg-config --exists webkit2gtk-4.1 gtk+-3.0 ayatana-appindicator3-0.1; then
@@ -15,8 +17,8 @@ fi
 
 if [ "$(id -u)" -eq 0 ]; then
   apt-get update
-  DEBIAN_FRONTEND=noninteractive apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf file tesseract-ocr espeak-ng xvfb xdotool dbus-x11
+  DEBIAN_FRONTEND=noninteractive apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf file tesseract-ocr espeak-ng rpm2cpio cpio xvfb xdotool dbus-x11
 else
   sudo apt-get update
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf file tesseract-ocr espeak-ng xvfb xdotool dbus-x11
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf file tesseract-ocr espeak-ng rpm2cpio cpio xvfb xdotool dbus-x11
 fi

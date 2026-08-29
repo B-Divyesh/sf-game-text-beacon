@@ -1,6 +1,6 @@
 {
   "name": "game-text-beacon",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,8 +11,9 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:desktop-local-ocr": "./scripts/install-linux-prereqs.sh && cargo test --manifest-path src-tauri/Cargo.toml claim_desktop_local_ocr",
-    "test:linux-package": "./scripts/install-linux-prereqs.sh && npm run tauri build -- --bundles deb && node scripts/test-linux-package.mjs",
+    "test:linux-package": "./scripts/install-linux-prereqs.sh && npm run tauri build -- --bundles deb && node scripts/test-bundled-ocr-runtime.mjs --kind deb && node scripts/test-linux-package.mjs",
     "test:linux-hotkey-package": "./scripts/install-linux-prereqs.sh && npm run tauri build -- --bundles deb && node scripts/test-linux-hotkey-package.mjs",
+    "test:bundled-ocr-runtime": "node scripts/test-bundled-ocr-runtime.mjs",
     "test:compatibility": "npm run test:linux-hotkey-package && ./scripts/install-compatibility-fixtures.sh && node scripts/test-five-title-compatibility.mjs",
     "test:watch": "vitest",
     "tauri": "node scripts/tauri.mjs",

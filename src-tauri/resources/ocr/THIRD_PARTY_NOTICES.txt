@@ -1,0 +1,10 @@
+Game Text Beacon bundles the local Tesseract OCR engine and English language data
+inside desktop packages. Tesseract and its English trained data are licensed
+under Apache License 2.0: https://github.com/tesseract-ocr/tesseract/blob/main/LICENSE
+
+The build copies only the dynamic libraries required by the platform-provided
+Tesseract distribution. Their notices remain available from that distribution.
+
+Linux packages also bundle eSpeak NG and its voice data so an AppImage or a
+package-manager installation can speak without a host speech command. eSpeak
+NG is licensed under GPL-3.0-or-later: https://github.com/espeak-ng/espeak-ng
