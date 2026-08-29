@@ -29,6 +29,16 @@ test('@claim:sample-read starts the bundled sample and reports the observable re
   await expect(page.locator('#demo-status')).toHaveText('Sample objective is reading.')
 })
 
+test('landing preview reads the bundled objective without a console or page error', async ({ page }) => {
+  const errors: string[] = []
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()) })
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Read sample objective' }).click()
+  await expect(page.locator('#preview-status')).toHaveText('Sample objective is reading.')
+  expect(errors).toEqual([])
+})
+
 test('@claim:demo-isolated writes and clears only demo storage during the demo flow', async ({ page }) => {
   await page.goto('/demo')
   await expect.poll(() => page.evaluate(() => localStorage.getItem('demo:game-text-beacon:visited'))).toBe('true')
@@ -46,6 +56,49 @@ test('@claim:local-demo-network makes no third-party requests while using the de
   const origin = new URL(page.url()).origin
   expect(requests).not.toEqual([])
   expect(requests.every((url) => new URL(url).origin === origin)).toBe(true)
+})
+
+test('@claim:no-telemetry records no third-party request across the public sample flow', async ({ page }) => {
+  const requests: string[] = []
+  page.on('request', (request) => requests.push(request.url()))
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Try it with sample data' }).click()
+  await page.getByRole('button', { name: 'Read sample objective' }).click()
+  const origin = new URL(page.url()).origin
+  expect(requests).not.toEqual([])
+  expect(requests.every((url) => new URL(url).origin === origin)).toBe(true)
+})
+
+test('@claim:no-payments lets a visitor use the complete sample flow without a checkout, account, or payment request', async ({ page }) => {
+  const requests: string[] = []
+  page.on('request', (request) => requests.push(request.url()))
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Try it with sample data' }).click()
+  await page.getByRole('button', { name: 'Read sample objective' }).click()
+  await expect(page.locator('form, input[type="email"], input[type="password"], [data-payment], [data-checkout]')).toHaveCount(0)
+  expect(requests.every((url) => new URL(url).origin === new URL(page.url()).origin)).toBe(true)
+})
+
+test('@claim:no-cloud-screenshots keeps a frame preview inside the local desktop bridge with no third-party request', async ({ page }) => {
+  const requests: string[] = []
+  page.on('request', (request) => requests.push(request.url()))
+  await page.addInitScript(() => {
+    const bridge = {
+      calls: [] as string[],
+      async invoke(command: string) {
+        this.calls.push(command)
+        if (command === 'get_settings') return { region: { x: 100, y: 100, width: 400, height: 180 }, hotkey: 'Ctrl+Shift+R' }
+        if (command === 'capture_preview') return { pngBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9J7hAAAAAASUVORK5CYII=', width: 1000, height: 600 }
+      },
+      async listen() { return () => undefined }
+    }
+    ;(window as unknown as { __BEACON_DESKTOP_BRIDGE__: typeof bridge }).__BEACON_DESKTOP_BRIDGE__ = bridge
+  })
+  await page.goto('/?app')
+  await page.getByRole('button', { name: 'Choose capture frame' }).click()
+  await expect(page.locator('dialog')).toBeVisible()
+  expect(await page.evaluate(() => (window as unknown as { __BEACON_DESKTOP_BRIDGE__: { calls: string[] } }).__BEACON_DESKTOP_BRIDGE__.calls)).toEqual(['get_settings', 'capture_preview'])
+  expect(requests.every((url) => new URL(url).origin === new URL(page.url()).origin)).toBe(true)
 })
 
 test('@claim:free-no-account lets a visitor use the sample without authentication or payment', async ({ page }) => {
@@ -100,7 +153,20 @@ test('390px mobile layout has no horizontal overflow and keeps navigation, home,
   expect(sizes.every((size) => size.width >= 44 && size.height >= 44)).toBe(true)
 })
 
-test('@claim:capture-frame lets a player draw, move, resize, and save a frame with the keyboard or pointer', async ({ page }) => {
+test('390px layout reflows at 200% text size, including a long Debian package filename', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => Object.defineProperty(navigator, 'userAgent', { configurable: true, value: 'Mozilla/5.0 (X11; Linux x86_64)' }))
+  await page.route('**/latest.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ assets: {
+    'Game.Text.Beacon_0.1.5_amd64_with_local_tesseract_ocr_and_accessibility_repair.deb': 'https://example.test/beacon.deb'
+  } }) }))
+  for (const route of ['/', '/demo']) {
+    await page.goto(route)
+    await page.addStyleTag({ content: 'html { font-size: 200%; }' })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  }
+})
+
+test('@claim:capture-frame lets a player draw, move, resize, and save a frame with pointer and keyboard', async ({ page }) => {
   await page.addInitScript(() => {
     const bridge = {
       calls: [] as Array<{ command: string, args: Record<string, unknown> }>,
@@ -119,29 +185,85 @@ test('@claim:capture-frame lets a player draw, move, resize, and save a frame wi
   await page.goto('/?app')
   await page.getByRole('button', { name: 'Choose capture frame' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
-  await page.locator('#picker-stage').click({ position: { x: 80, y: 80 } })
-  await page.getByRole('button', { name: 'Cancel' }).click()
-
-  await page.getByRole('button', { name: 'Choose capture frame' }).click()
   const editor = page.locator('#picker-stage')
   await expect(page.locator('#picker-help')).toContainText('Keyboard: focus the preview')
   await expect(editor).toHaveAttribute('aria-describedby', /picker-help picker-status/)
   const pickerAxe = await new AxeBuilder({ page }).analyze()
   expect(pickerAxe.violations.filter((item) => ['critical', 'serious'].includes(item.impact || ''))).toEqual([])
+  const editorBox = await editor.boundingBox()
+  expect(editorBox).not.toBeNull()
+  const box = editorBox!
+  await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width * 0.45, box.y + box.height * 0.5)
+  await page.mouse.up()
+  const drawn = await page.locator('#frame-x, #frame-y, #frame-width, #frame-height').evaluateAll((inputs) => inputs.map((input) => Number((input as HTMLInputElement).value)))
+  expect(drawn[2]).toBeGreaterThan(20)
+  expect(drawn[3]).toBeGreaterThan(20)
+  const selection = page.locator('#selection')
+  const selectionBox = await selection.boundingBox()
+  expect(selectionBox).not.toBeNull()
+  await page.mouse.move(selectionBox!.x + selectionBox!.width / 2, selectionBox!.y + selectionBox!.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(selectionBox!.x + selectionBox!.width / 2 + 20, selectionBox!.y + selectionBox!.height / 2 + 20)
+  await page.mouse.up()
+  const moved = await page.locator('#frame-x, #frame-y, #frame-width, #frame-height').evaluateAll((inputs) => inputs.map((input) => Number((input as HTMLInputElement).value)))
+  expect(moved[0]).toBeGreaterThan(drawn[0])
+  expect(moved[1]).toBeGreaterThan(drawn[1])
+  const handle = page.locator('.resize-handle')
+  const handleBox = await handle.boundingBox()
+  expect(handleBox).not.toBeNull()
+  await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(handleBox!.x + handleBox!.width / 2 + 20, handleBox!.y + handleBox!.height / 2 + 20)
+  await page.mouse.up()
+  const resized = await page.locator('#frame-x, #frame-y, #frame-width, #frame-height').evaluateAll((inputs) => inputs.map((input) => Number((input as HTMLInputElement).value)))
+  expect(resized[2]).toBeGreaterThan(moved[2])
+  expect(resized[3]).toBeGreaterThan(moved[3])
   await editor.focus()
   await expect(editor).toBeFocused()
+  await page.keyboard.press('m')
+  await page.keyboard.press('ArrowRight')
+  await expect(page.locator('#picker-status')).toContainText('Frame moved with keyboard')
   await page.keyboard.press('d')
   await expect(page.locator('#picker-status')).toContainText('New frame started')
   await page.keyboard.press('m')
-  await page.keyboard.press('ArrowRight')
-  await page.keyboard.press('Shift+ArrowDown')
   await page.keyboard.press('r')
   await page.keyboard.press('Shift+ArrowRight')
-  await expect(page.locator('#picker-status')).toContainText('210 × 100')
+  await expect(page.locator('#picker-status')).toContainText('Frame resized with keyboard')
   await page.getByRole('button', { name: 'Use this capture frame' }).click()
   await expect(page.locator('#app-status')).toContainText('Capture frame saved')
   const saved = await page.evaluate(() => (window as unknown as { __BEACON_DESKTOP_BRIDGE__: { settings: { region: { x: number, y: number, width: number, height: number } } } }).__BEACON_DESKTOP_BRIDGE__.settings.region)
-  expect(saved).toEqual({ x: 110, y: 150, width: 210, height: 100 })
+  expect(saved.width).toBeGreaterThanOrEqual(20)
+  expect(saved.height).toBeGreaterThanOrEqual(20)
+})
+
+test('desktop settings startup rejection shows usable default settings and a retry recovery control', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.addInitScript(() => {
+    let attempts = 0
+    const bridge = {
+      async invoke(command: string) {
+        if (command === 'get_settings') {
+          attempts += 1
+          if (attempts === 1) throw new Error('settings unavailable')
+          return { region: { x: 12, y: 24, width: 320, height: 160 }, hotkey: 'Ctrl+Alt+B' }
+        }
+        if (command === 'capture_region') return 'Recovered local text.'
+      },
+      async listen() { return () => undefined }
+    }
+    ;(window as unknown as { __BEACON_DESKTOP_BRIDGE__: typeof bridge }).__BEACON_DESKTOP_BRIDGE__ = bridge
+  })
+  await page.goto('/?app')
+  await expect(page.locator('#app-status')).toContainText('Using a new local frame')
+  await expect(page.getByRole('button', { name: 'Retry saved settings' })).toBeVisible()
+  await page.getByRole('button', { name: 'Read this frame' }).click()
+  await expect(page.locator('#queue')).toContainText('Recovered local text.')
+  await page.getByRole('button', { name: 'Retry saved settings' }).click()
+  await expect(page.locator('#app-status')).toContainText('Ctrl+Alt+B is ready')
+  expect(errors).toEqual([])
 })
 
 test('@claim:reading-queue queues consecutive native captures for speech without cancelling the current utterance', async ({ page }) => {

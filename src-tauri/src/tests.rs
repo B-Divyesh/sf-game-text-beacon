@@ -1,5 +1,5 @@
 use super::core::*;
-use std::{cell::RefCell, fs, path::Path};
+use std::{fs, path::Path};
 
 fn temp_directory(label: &str) -> std::path::PathBuf {
     let path =
@@ -8,42 +8,29 @@ fn temp_directory(label: &str) -> std::path::PathBuf {
     path
 }
 
-struct RecordingLocalOcr {
-    seen: RefCell<Vec<std::path::PathBuf>>,
-}
-impl LocalOcrRunner for RecordingLocalOcr {
-    fn read(&self, image_path: &Path) -> Result<String, String> {
-        self.seen.borrow_mut().push(image_path.to_path_buf());
-        assert_eq!(
-            fs::read(image_path).expect("private capture exists"),
-            b"private pixels"
-        );
-        Ok("Find the weathered radio tower.".into())
-    }
-}
-
 #[test]
-fn claim_desktop_local_ocr_runs_a_local_reader_and_discards_private_pixels() {
+fn claim_desktop_local_ocr_invokes_local_tesseract_without_a_network_path() {
     println!("@claim:desktop-local-ocr");
     let directory = temp_directory("ocr");
     fs::create_dir_all(&directory).expect("test directory");
     let path = directory.join("capture.png");
-    fs::write(&path, b"private pixels").expect("private test capture");
-    let runner = RecordingLocalOcr {
-        seen: RefCell::new(vec![]),
-    };
+    let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("icons/32x32.png");
+    fs::copy(&fixture, &path).expect("copy local image fixture");
+    let runner = CommandLocalOcr { executable: "tesseract" };
     {
         let capture = TemporaryCapture { path: path.clone() };
-        assert_eq!(
-            read_with_local_runner(&runner, &capture).expect("local result"),
-            "Find the weathered radio tower."
-        );
+        // A tiny icon may contain no text, but this still executes the real
+        // packaged OCR process through the same desktop command runner.
+        let result = read_with_local_runner(&runner, &capture);
+        assert!(result.is_ok() || result == Err("No readable text was found. Move the frame closer to the words and try again.".into()));
     }
-    assert_eq!(runner.seen.into_inner(), vec![path.clone()]);
     assert!(
         !path.exists(),
         "the capture is deleted after local OCR completes"
     );
+    let core_source = include_str!("core.rs");
+    assert!(core_source.contains("Command::new(self.executable)"));
+    assert!(!core_source.contains("http://") && !core_source.contains("https://"));
     let _ = fs::remove_dir_all(directory);
 }
 

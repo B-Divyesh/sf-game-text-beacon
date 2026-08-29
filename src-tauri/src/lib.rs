@@ -9,7 +9,7 @@ mod tests;
 
 #[cfg(feature = "desktop")]
 use crate::core::{
-    bounded_region, read_with_local_runner, LocalOcrRunner, Region, Settings, SettingsStore,
+    bounded_region, read_with_local_runner, CommandLocalOcr, Region, Settings, SettingsStore,
     TemporaryCapture,
 };
 #[cfg(feature = "desktop")]
@@ -20,7 +20,6 @@ use serde::Serialize;
 use std::{
     io::Cursor,
     path::PathBuf,
-    process::Command,
     sync::Mutex,
     thread,
     time::{SystemTime, UNIX_EPOCH},
@@ -59,26 +58,6 @@ fn local_ocr(capture: &TemporaryCapture) -> Result<String, String> {
         },
         capture,
     )
-}
-
-#[cfg(feature = "desktop")]
-struct CommandLocalOcr {
-    executable: &'static str,
-}
-
-#[cfg(feature = "desktop")]
-impl LocalOcrRunner for CommandLocalOcr {
-    fn read(&self, image_path: &std::path::Path) -> Result<String, String> {
-        let output = Command::new(self.executable).arg(image_path).arg("stdout").arg("--psm").arg("6").output()
-        .map_err(|_| "Beacon needs the local Tesseract OCR engine. Install the packaged OCR dependency, then press the hotkey again.".to_string())?;
-        if !output.status.success() {
-            return Err(
-                "Tesseract could not read this region. Try a tighter frame with larger text."
-                    .into(),
-            );
-        }
-        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
-    }
 }
 
 #[cfg(feature = "desktop")]

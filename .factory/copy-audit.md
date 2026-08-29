@@ -12,6 +12,7 @@
 | Point the frame at the words you need. | 9 | pass |
 | Beacon reads the selected words. | 5 | pass |
 | It does not press game controls or change a game. | 10 | pass |
+| Ready to read the sample objective. | 6 | pass |
 | Set a frame. | 3 | pass |
 | Draw and resize one region over dialogue, a menu, or an objective. | 11 | pass |
 | Press your hotkey. | 3 | pass |

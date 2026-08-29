@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs,
     path::{Path, PathBuf},
+    process::Command,
 };
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -47,6 +48,32 @@ impl Drop for TemporaryCapture {
 
 pub trait LocalOcrRunner {
     fn read(&self, image_path: &Path) -> Result<String, String>;
+}
+
+/// The desktop shell invokes the Tesseract executable installed with the app's
+/// Linux package. This runner is deliberately process-only: it has no HTTP
+/// client, endpoint, or upload path.
+pub struct CommandLocalOcr {
+    pub executable: &'static str,
+}
+
+impl LocalOcrRunner for CommandLocalOcr {
+    fn read(&self, image_path: &Path) -> Result<String, String> {
+        let output = Command::new(self.executable)
+            .arg(image_path)
+            .arg("stdout")
+            .arg("--psm")
+            .arg("6")
+            .output()
+            .map_err(|_| "Beacon needs the local Tesseract OCR engine. Install the packaged OCR dependency, then press the hotkey again.".to_string())?;
+        if !output.status.success() {
+            return Err(
+                "Tesseract could not read this region. Try a tighter frame with larger text."
+                    .into(),
+            );
+        }
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    }
 }
 
 pub fn read_with_local_runner(

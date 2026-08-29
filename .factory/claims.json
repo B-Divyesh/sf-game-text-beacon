@@ -21,11 +21,32 @@
     "sandbox": "demo shell assets resolve same-origin only"
   },
   {
+    "id": "no-telemetry",
+    "claim": "Beacon sends no telemetry",
+    "where": "README and privacy page",
+    "test": "npm run test:e2e -- --grep @claim:no-telemetry",
+    "sandbox": "fresh browser context; landing to demo sample flow records only same-origin requests"
+  },
+  {
+    "id": "no-payments",
+    "claim": "Beacon has no payment flow",
+    "where": "README",
+    "test": "npm run test:e2e -- --grep @claim:no-payments",
+    "sandbox": "fresh browser context; complete sample flow has no account, checkout controls, or payment request"
+  },
+  {
+    "id": "no-cloud-screenshots",
+    "claim": "Beacon does not upload screenshots to a cloud service",
+    "where": "landing limits and privacy page",
+    "test": "npm run test:e2e -- --grep @claim:no-cloud-screenshots",
+    "sandbox": "mocked local desktop bridge; opening the capture preview uses only the bridge and makes no third-party request"
+  },
+  {
     "id": "desktop-local-ocr",
     "claim": "The desktop capture uses local OCR and no cloud OCR endpoint",
     "where": "privacy page and README",
     "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_desktop_local_ocr",
-    "sandbox": "native capture source invokes local tesseract and contains no HTTP endpoint"
+    "sandbox": "native command runner invokes installed local Tesseract on a private capture fixture and contains no HTTP endpoint"
   },
   {
     "id": "free-no-account",

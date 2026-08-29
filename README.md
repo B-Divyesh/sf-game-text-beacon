@@ -33,13 +33,13 @@ npm run build       # same static deployment build -> dist/site
 npm run tauri build # local native package build
 ```
 
-The two native claim commands in `.factory/claims.json` are deliberately pure Rust contract checks. They run after `npm ci` without GTK/WebKit development headers. Install the prerequisites above only when launching or packaging the desktop window.
+The three native claim commands in `.factory/claims.json` are Rust contract checks. They run without GTK/WebKit development headers; the local-OCR claim invokes the installed Tesseract executable. Install the prerequisites above before running that OCR check, launching, or packaging the desktop window.
 
 `npm run build:site` is the deployment build command. The static output has `index.html` at `dist/site/index.html`.
 
 ## Release
 
-Tag `v0.1.4` and push it to run `.github/workflows/release.yml`. The workflow builds unsigned macOS, Windows, and Linux packages, installs the Linux native prerequisites, and adds release checksums and `latest.json`. The landing site reads a same-origin `latest.json`, so an unpublished release never creates a browser console error.
+Tag `v0.1.6` and push it to run `.github/workflows/release.yml`. The workflow builds unsigned macOS, Windows, and Linux packages, installs the Linux native prerequisites, and adds release checksums and `latest.json`. The landing site reads a same-origin `latest.json`, so an unpublished release never creates a browser console error.
 
 Native core regression checks need only Rust; use `cargo test --manifest-path src-tauri/Cargo.toml`. Desktop development and packaging additionally need the platform prerequisites. On Debian/Ubuntu install `libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf file tesseract-ocr`, then run `npm run tauri:build`. The Linux landing-page download and `install.sh` prefer the verified `.deb`, which installs `tesseract-ocr` as a package dependency.
 
