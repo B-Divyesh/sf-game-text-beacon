@@ -63,9 +63,19 @@ The Debian package version is `0.1.6` and declares `tesseract-ocr`,
 
 ## Release and deployment
 
-The GitHub Actions tag release and Static Web Apps production deployment are
-performed after this handoff update so the public download manifest and live
-site can be verified against the exact committed repair.
+The verified static output was deployed to the production Static Web App
+`sf-game-text-beacon`. `verify-url.sh` against
+`https://game-text-beacon.sociobot.in` passed with an 888 ms load, no console
+or page errors, and valid title/lang/one-h1/main/alt checks. A live 390 px
+browser check confirmed the repaired landing Read action announces “Sample
+objective is reading.” without errors, both `/` and `/demo` have a 390 px
+scroll width at normal text size, and Axe reports no serious or critical
+violations on the demo.
+
+Tag `v0.1.6` is pushed and GitHub Actions run
+`33240641958` is publishing the matching macOS, Windows, and Linux installers
+with `SHA256SUMS` and the release manifest. Check its completion before
+announcing the installers externally.
 
 Desktop packages intentionally remain unsigned. macOS notarization requires
 `APPLE_CERTIFICATE`; Windows Authenticode requires `WINDOWS_CERT_PFX`.
