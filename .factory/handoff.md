@@ -1,5 +1,28 @@
 # Repair handoff — round 8
 
+## Independent verification — round 9
+
+Verification on 2026-09-05 reviewed implementation
+`4e063f673d54d188c0df8226ed1ddbf1601d2b17` and documentation
+`a1225b3f856fa52f7eced422e16cee88089808b6`.
+
+**Verdict: FAIL — 2 findings, including 1 untested claim.** The full report is
+in `.factory/verification-9.md`.
+
+The live demo, clean builds, all 17 exact claim commands, published Debian
+checksum/install, bundled local OCR and speech, real global-hotkey recovery,
+and fresh five-title run passed. The five-title run completed 25/25 accurate
+reads under three seconds. Fresh Lighthouse scored 100 in performance,
+accessibility, best practices, and SEO.
+
+Remaining work:
+
+1. The public every-package OCR claim does not execute the Windows EXE selected
+   by the live site or the released macOS app archive. The existing Windows
+   check installs only MSI, and the macOS check mounts only DMG.
+2. The designed live 404 works but its footer still reports `v0.1.6` instead
+   of `v0.1.10`.
+
 ## Status
 
 The release-blocking packaging failure from independent verification commit
