@@ -98,6 +98,9 @@ Results:
 - An unknown URL returns the designed HTTP 404 (the browser's failed-document
   message is expected) and its visible footer is `v0.1.11`. The deployed
   `latest.json` is v0.1.11 with seven assets.
+- Fresh Windows, macOS, and Linux browser user agents received the real
+  v0.1.11 EXE, DMG, and Debian download links respectively; each page stated
+  the matching bundled local OCR capability.
 
 ## Earlier findings
 
