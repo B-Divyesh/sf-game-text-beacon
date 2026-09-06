@@ -11,6 +11,7 @@ type DesktopBridge = {
 }
 
 declare global { interface Window { __BEACON_DESKTOP_BRIDGE__?: DesktopBridge } }
+declare const __BEACON_VERSION__: string
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 const isDesktop = '__TAURI_INTERNALS__' in window || new URLSearchParams(location.search).has('app')
@@ -45,7 +46,7 @@ function shell(content: string, title: string, description: string) {
     <header class="site-head"><a class="wordmark" href="/" data-link><span aria-hidden="true">⌜◉⌟</span> Game Text Beacon</a>
     <nav aria-label="Main navigation"><a href="/demo" data-link>Demo</a><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a></nav></header>
     <div class="route-status" aria-live="polite" aria-atomic="true"></div>${content}
-    <footer><p>Read game text aloud from a chosen region.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.10</p><p class="tiny">Notebook art is original generated product art.</p></footer>`
+    <footer><p>Read game text aloud from a chosen region.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v${__BEACON_VERSION__}</p><p class="tiny">Notebook art is original generated product art.</p></footer>`
   document.querySelectorAll<HTMLAnchorElement>('[data-link]').forEach((link) => link.addEventListener('click', (event) => {
     event.preventDefault(); navigate(link.getAttribute('href') || '/')
   }))

@@ -53,7 +53,7 @@
     "claim": "Every advertised desktop package includes local Tesseract OCR and English data",
     "where": "desktop download status and README",
     "test": "npm run test:bundled-ocr-runtime",
-    "sandbox": "fresh current-platform package; extract or install it, invoke its bundled Tesseract directly on a shipped generated fixture, and assert TEST is read without PATH"
+    "sandbox": "every package format produced by each release runner; install or extract each one, invoke its bundled Tesseract directly on a shipped generated fixture, and assert TEST is read without PATH"
   },
   {
     "id": "free-no-account",

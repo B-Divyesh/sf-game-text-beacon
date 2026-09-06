@@ -38,13 +38,13 @@ npm run test:compatibility # run 25 timed reads across five real windowed games
 npm run test:claims # run every exact claim command from .factory/claims.json
 ```
 
-Native claim commands provision their Debian/Ubuntu build requirements through the idempotent prerequisite script. The packaged OCR regression extracts fresh Debian, RPM, and AppImage packages and reads a high-contrast fixture through each bundled executable and English data, without using PATH. The release workflow runs the equivalent mounted or installed package check for Linux, Windows, and macOS. The packaged hotkey claim installs the built `.deb`, starts two real app instances on one X11 display, sends an OS-level shortcut while another window has focus, and checks conflict recovery plus one captured reading.
+Native claim commands provision their Debian/Ubuntu build requirements through the idempotent prerequisite script. The packaged OCR regression extracts fresh Debian, RPM, and AppImage packages and reads a high-contrast fixture through each bundled executable and English data, without using PATH. The release workflow also installs both Windows installers (MSI and EXE), and checks both macOS delivery formats (mounted DMG and extracted app archive). The packaged hotkey claim installs the built `.deb`, starts two real app instances on one X11 display, sends an OS-level shortcut while another window has focus, and checks conflict recovery plus one captured reading.
 
 `npm run build:site` is the deployment build command. The static output has `index.html` at `dist/site/index.html`.
 
 ## Release
 
-Tag `v0.1.10` and push it to run `.github/workflows/release.yml`. The workflow builds unsigned macOS, Windows, and Linux packages, bundles Tesseract plus English data, reads an OCR fixture from each installed package, and adds release checksums and `latest.json`. The landing site reads a same-origin `latest.json`, so an unpublished release never creates a browser console error.
+Tag `v0.1.11` and push it to run `.github/workflows/release.yml`. The workflow builds unsigned macOS, Windows, and Linux packages, bundles Tesseract plus English data, reads an OCR fixture from each installed package, and adds release checksums and `latest.json`. The landing site reads a same-origin `latest.json`, so an unpublished release never creates a browser console error.
 
 Native core regression checks need only Rust; use `cargo test --manifest-path src-tauri/Cargo.toml`. Desktop development and packaging additionally need the platform prerequisites. On Debian/Ubuntu run `./scripts/install-linux-prereqs.sh`, then `npm run tauri build`. The Linux landing-page download and `install.sh` prefer the verified `.deb`, which includes its own OCR data and local speech engine.
 

@@ -1,0 +1,1 @@
+Read game text aloud from a chosen local screen region.

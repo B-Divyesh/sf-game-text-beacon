@@ -2,8 +2,10 @@ import { expect, test } from '@playwright/test'
 import { AxeBuilder } from '@axe-core/playwright'
 import { readFileSync } from 'node:fs'
 
-test('the static 404 uses same-origin CSS under the production CSP and keeps the shared shell', async ({ page }) => {
-  const notFound = readFileSync('public/404.html', 'utf8')
+const applicationVersion = JSON.parse(readFileSync('package.json', 'utf8')).version as string
+
+test('the built 404 uses same-origin CSS, keeps the shared shell, and reports the application build version', async ({ page }) => {
+  const notFound = readFileSync('dist/site/404.html', 'utf8')
   const errors: string[] = []
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()) })
   await page.route('**/missing-note', (route) => route.fulfill({
@@ -17,6 +19,7 @@ test('the static 404 uses same-origin CSS under the production CSP and keeps the
   await expect(page.locator('header .wordmark')).toBeVisible()
   await expect(page.locator('main h1')).toHaveText('This note is missing')
   await expect(page.locator('footer')).toContainText('Built by Param Factory')
+  await expect(page.locator('footer')).toContainText(`v${applicationVersion}`)
   await expect(page.locator('link[rel="stylesheet"]')).toHaveAttribute('href', '/404.css')
   expect(errors.filter((error) => /content security policy|inline style/i.test(error))).toEqual([])
 })

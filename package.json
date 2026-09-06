@@ -1,15 +1,15 @@
 {
   "name": "game-text-beacon",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "npm run build:site",
-    "build:site": "vite build --outDir dist/site",
+    "build:site": "vite build --outDir dist/site && node scripts/inject-site-version.mjs dist/site/404.html",
     "preview": "vite preview --outDir dist/site",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run build:site && playwright test",
     "test:desktop-local-ocr": "./scripts/install-linux-prereqs.sh && cargo test --manifest-path src-tauri/Cargo.toml claim_desktop_local_ocr",
     "test:linux-package": "./scripts/install-linux-prereqs.sh && npm run tauri build -- --bundles deb && node scripts/test-bundled-ocr-runtime.mjs --kind deb && node scripts/test-linux-package.mjs",
     "test:linux-hotkey-package": "./scripts/install-linux-prereqs.sh && npm run tauri build -- --bundles deb && node scripts/test-linux-hotkey-package.mjs",

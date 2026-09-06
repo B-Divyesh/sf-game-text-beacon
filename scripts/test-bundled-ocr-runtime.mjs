@@ -32,10 +32,31 @@ const files = (directory) => {
   return result
 }
 
-const currentPackage = (directory, extension) => {
-  const name = readdirSync(directory).filter((file) => file.endsWith(extension) && file.includes(packageVersion)).sort().at(-1)
+const currentPackage = (directory, extension, { versioned = true } = {}) => {
+  const name = readdirSync(directory)
+    .filter((file) => file.endsWith(extension) && (!versioned || file.includes(packageVersion)))
+    .sort()
+    .at(-1)
   assert(name, `No current ${packageVersion} ${extension} package found in ${directory}`)
   return name
+}
+
+const packageFile = (extension, options) => {
+  const file = files(resolve('src-tauri/target'))
+    .filter((candidate) => candidate.endsWith(extension) && (!options?.versioned || candidate.includes(packageVersion)))
+    .sort()
+    .at(-1)
+  assert(file, `No current ${packageVersion} ${extension} package found in the package output`)
+  return file
+}
+
+const archiveAppVersion = (archive) => {
+  const entries = run('tar', ['-tzf', archive]).stdout.split(/\r?\n/)
+  const plist = entries.find((entry) => /\.app\/Contents\/Info\.plist$/.test(entry))
+  assert(plist, `The macOS app archive has no Info.plist: ${archive}`)
+  const contents = run('tar', ['-xOf', archive, plist]).stdout
+  const match = contents.match(/<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/)
+  assert.equal(match?.[1], packageVersion, `The macOS app archive is not version ${packageVersion}`)
 }
 
 const packageExists = () => {
@@ -52,8 +73,18 @@ const packageExists = () => {
           : ['.deb', '.rpm', '.AppImage']
     return required.every((extension) => packageFiles.some((file) => file.endsWith(extension) && file.includes(packageVersion)))
   }
-  const extension = process.platform === 'win32' ? '.msi' : '.dmg'
-  return packageFiles.some((file) => file.endsWith(extension) && file.includes(packageVersion))
+  if (process.platform === 'win32') {
+    return ['.msi', '.exe'].every((extension) => packageFiles.some((file) => file.endsWith(extension) && file.includes(packageVersion)))
+  }
+  const dmgPresent = packageFiles.some((file) => file.endsWith('.dmg') && file.includes(packageVersion))
+  const appArchive = packageFiles.filter((file) => file.endsWith('.app.tar.gz')).sort().at(-1)
+  if (!dmgPresent || !appArchive) return false
+  try {
+    archiveAppVersion(appArchive)
+    return true
+  } catch {
+    return false
+  }
 }
 
 const ensureCurrentPlatformPackage = () => {
@@ -62,7 +93,7 @@ const ensureCurrentPlatformPackage = () => {
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
   const bundles = process.platform === 'linux'
     ? requestedKind === 'deb' ? 'deb' : requestedKind === 'rpm' ? 'rpm' : requestedKind === 'appimage' ? 'appimage' : 'deb,rpm,appimage'
-    : process.platform === 'win32' ? 'msi' : 'dmg'
+    : process.platform === 'win32' ? 'msi,nsis' : 'dmg,app'
   run(npm, ['run', 'tauri', 'build', '--', '--bundles', bundles])
 }
 
@@ -152,15 +183,23 @@ const testLinux = () => {
 const testWindows = () => {
   const msiDirectory = resolve('src-tauri/target/release/bundle/msi')
   const msi = currentPackage(msiDirectory, '.msi')
-  const installDirectory = join(scratch, 'installed')
-  run('msiexec.exe', ['/i', join(msiDirectory, msi), '/qn', `INSTALLDIR=${installDirectory}`])
-  verifyRead(runtimeFrom(installDirectory, 'windows'))
+  const msiInstallDirectory = join(scratch, 'msi-installed')
+  run('msiexec.exe', ['/i', join(msiDirectory, msi), '/qn', `INSTALLDIR=${msiInstallDirectory}`])
+  verifyRead(runtimeFrom(msiInstallDirectory, 'windows'))
   console.log(`PASS bundled OCR read from installed Windows MSI: ${msi}`)
+
+  const setup = packageFile('.exe', { versioned: true })
+  const exeInstallDirectory = join(scratch, 'exe-installed')
+  // NSIS requires /D= to be its final argument. This is a fresh, silent
+  // consumer install, then the test starts Tesseract from that install by its
+  // absolute path with the builder's OCR directory removed from PATH.
+  run(setup, ['/S', `/D=${exeInstallDirectory}`])
+  verifyRead(runtimeFrom(exeInstallDirectory, 'windows'))
+  console.log(`PASS bundled OCR read from installed Windows EXE: ${basename(setup)}`)
 }
 
 const testMacos = () => {
-  const dmgPath = files(resolve('src-tauri/target')).filter((file) => file.endsWith('.dmg') && file.includes(packageVersion)).sort().at(-1)
-  assert(dmgPath, 'No macOS DMG found in the package output')
+  const dmgPath = packageFile('.dmg', { versioned: true })
   const mount = join(scratch, 'mounted')
   mkdirSync(mount)
   run('hdiutil', ['attach', '-nobrowse', '-mountpoint', mount, dmgPath])
@@ -173,6 +212,14 @@ const testMacos = () => {
     spawnSync('hdiutil', ['detach', '-force', mount], { encoding: 'utf8' })
   }
   console.log(`PASS bundled OCR read from mounted macOS DMG: ${basename(dmgPath)}`)
+
+  const appArchive = packageFile('.app.tar.gz', { versioned: false })
+  archiveAppVersion(appArchive)
+  const extracted = join(scratch, 'app-archive')
+  mkdirSync(extracted)
+  run('tar', ['-xzf', appArchive, '-C', extracted])
+  verifyRead(runtimeFrom(extracted, 'macos'))
+  console.log(`PASS bundled OCR read from extracted macOS app archive: ${basename(appArchive)}`)
 }
 
 try {
